@@ -1,11 +1,13 @@
 import 'react-native-reanimated';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, usePathname, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { STORAGE_KEYS } from '../types';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -13,12 +15,42 @@ export default function RootLayout() {
   const [loaded] = useFonts({
     // Using system fonts for now - no custom fonts required
   });
+  const pathname = usePathname();
+  const router = useRouter();
 
   useEffect(() => {
     if (loaded) {
       SplashScreen.hideAsync();
     }
   }, [loaded]);
+
+  // Unified initial route: show onboarding only on first run
+  useEffect(() => {
+    if (!loaded) return;
+
+    const checkOnboarding = async () => {
+      try {
+        const seen = await AsyncStorage.getItem(STORAGE_KEYS.ONBOARDING_SEEN);
+        const hasSeen = seen === 'true';
+
+        if (!hasSeen && pathname !== '/onboarding') {
+          router.replace('/onboarding');
+          return;
+        }
+
+        if (hasSeen && pathname === '/onboarding') {
+          router.replace('/');
+        }
+      } catch (e) {
+        // On error, fall back to showing home
+        if (pathname === '/onboarding') {
+          router.replace('/');
+        }
+      }
+    };
+
+    checkOnboarding();
+  }, [loaded, pathname, router]);
 
   if (!loaded) {
     return null;

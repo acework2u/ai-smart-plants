@@ -11,7 +11,7 @@ import { router } from 'expo-router';
 import { Camera, Image, Leaf, Sparkles } from 'lucide-react-native';
 import { Button, Card, Section, Chip } from '../components/atoms';
 import { useGardenStore } from '../stores/garden';
-import { colors, spacing, typography, radius } from '../core/theme';
+import { colors, typography, radius, getSpacing } from '../core/theme';
 import { initializeCore } from '../core';
 
 export default function HomeScreen() {

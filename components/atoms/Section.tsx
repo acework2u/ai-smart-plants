@@ -8,7 +8,7 @@ import {
   TextStyle,
 } from 'react-native';
 import { haptic } from '../../core/haptics';
-import { colors, spacing, typography } from '../../core/theme';
+import { colors, typography, getSpacing } from '../../core/theme';
 
 export interface SectionProps {
   title: string;
