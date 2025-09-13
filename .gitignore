@@ -58,3 +58,24 @@ app-example
 *.sln
 *.sw?   
 .vscode/=
+
+# bundler
+.bundle
+vendor/bundle
+vendor/cache
+.bundle-cache
+vendor/gems
+dist/
+tmp/
+dist-*
+.cache/
+webpack-cache/
+webpack-bundle.js
+build/
+build-*/
+.cache-loader/
+.cache/
+.cache-*/
+.cache-*/
+.cache-*/
+.cache-*/

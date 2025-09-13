@@ -2,6 +2,12 @@
 
 > **Purpose:** This document gives Claude Code CLI everything it needs to scaffold and implement a production‑grade **React Native / Expo** app of *Smart Plant AI* based on the mobile web mockup currently in canvas. It defines scope, structure, contracts, and acceptance criteria so the code generator can create runnable code in one pass.
 
+## Project Overview
+Smart Plant AI is a mobile application that helps users take care of their plants using AI. Users can capture or upload plant photos, get instant analysis, save plants into their personal garden, track activity logs (watering, fertilizing, etc.), receive notifications, and see insights about plant health.
+
+
+The application was originally prototyped as a mobile web mockup in React with TailwindCSS, lucide-react icons, and framer-motion animations. We now want to port it into a **full native mobile app** using **React Native / Expo**.
+
 ---
 
 ## 0) High‑Level Goals
