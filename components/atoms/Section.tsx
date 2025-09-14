@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: typography.fontSize.lg,
     fontFamily: typography.fontFamily.semibold,
-    fontWeight: typography.fontWeight.semibold,
+    fontWeight: typography.fontWeight.semibold as any,
     color: colors.text.primary,
     lineHeight: typography.lineHeight.tight * typography.fontSize.lg,
   },

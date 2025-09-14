@@ -6,9 +6,18 @@ import {
   ActivityIndicator,
   ViewStyle,
   TextStyle,
+  View,
 } from 'react-native';
-import { haptic } from '../../core/haptics';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
+import { haptic, useHaptic } from '../../core/haptics';
 import { colors, getSpacing, spacing, radius, typography, sizes } from '../../core/theme';
+
+const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
 export interface ButtonProps {
   title: string;
@@ -20,6 +29,10 @@ export interface ButtonProps {
   style?: ViewStyle;
   textStyle?: TextStyle;
   hapticType?: 'primary' | 'secondary' | 'ghost';
+  leftIcon?: React.ReactNode;
+  rightIcon?: React.ReactNode;
+  animated?: boolean;
+  fullWidth?: boolean;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -32,21 +45,42 @@ export const Button: React.FC<ButtonProps> = ({
   style,
   textStyle,
   hapticType,
+  leftIcon,
+  rightIcon,
+  animated = true,
+  fullWidth = false,
 }) => {
+  const hapticService = useHaptic();
+  const scale = useSharedValue(1);
+  const opacity = useSharedValue(1);
+
   const handlePress = async () => {
     if (disabled || loading) return;
 
     // Trigger haptic feedback
-    const hapticVariant = hapticType || variant;
-    await haptic(hapticVariant === 'primary' ? 'medium' : 'light');
+    const hapticVariant = hapticType || (variant === 'danger' ? 'primary' : variant);
+    await hapticService.buttonPress(hapticVariant as 'primary' | 'secondary' | 'ghost');
+
+    // Animation
+    if (animated) {
+      scale.value = withSpring(0.95, { duration: 100 }, () => {
+        scale.value = withSpring(1, { duration: 100 });
+      });
+    }
 
     onPress();
   };
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    opacity: opacity.value,
+  }));
 
   const buttonStyles = [
     styles.base,
     styles[variant],
     styles[size],
+    fullWidth && styles.fullWidth,
     disabled && styles.disabled,
     style,
   ];
@@ -59,32 +93,43 @@ export const Button: React.FC<ButtonProps> = ({
     textStyle,
   ];
 
+  const ButtonComponent = animated ? AnimatedTouchableOpacity : TouchableOpacity;
+
   return (
-    <TouchableOpacity
-      style={buttonStyles}
+    <ButtonComponent
+      style={[buttonStyles, animated && animatedStyle]}
       onPress={handlePress}
       disabled={disabled || loading}
-      activeOpacity={0.7}
+      activeOpacity={0.8}
     >
       {loading ? (
         <ActivityIndicator
-          size="small"
-          color={variant === 'primary' ? colors.white : colors.primary}
+          size={size === 'lg' ? 'large' : 'small'}
+          color={
+            variant === 'primary' || variant === 'danger'
+              ? colors.white
+              : colors.primary
+          }
         />
       ) : (
-        <Text style={textStyles}>{title}</Text>
+        <View style={styles.content}>
+          {leftIcon && <View style={styles.leftIcon}>{leftIcon}</View>}
+          <Text style={textStyles}>{title}</Text>
+          {rightIcon && <View style={styles.rightIcon}>{rightIcon}</View>}
+        </View>
       )}
-    </TouchableOpacity>
+    </ButtonComponent>
   );
 };
 
 const styles = StyleSheet.create({
   base: {
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
+    overflow: 'hidden',
   },
 
   // Variants
@@ -119,11 +164,28 @@ const styles = StyleSheet.create({
     paddingVertical: getSpacing(4),
   },
 
+  // Layout
+  fullWidth: {
+    width: '100%',
+  },
+  content: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  leftIcon: {
+    marginRight: getSpacing(2),
+  },
+  rightIcon: {
+    marginLeft: getSpacing(2),
+  },
+
   // Text styles
   text: {
     fontFamily: typography.fontFamily.medium,
-    fontWeight: typography.fontWeight.medium,
+    fontWeight: typography.fontWeight.medium as any,
     textAlign: 'center',
+    includeFontPadding: false,
   },
   primaryText: {
     color: colors.white,

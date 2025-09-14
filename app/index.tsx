@@ -6,13 +6,15 @@ import {
   StyleSheet,
   SafeAreaView,
   Platform,
+  Alert,
 } from 'react-native';
 import { router } from 'expo-router';
-import { Camera, Image, Leaf, Sparkles } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { Leaf, Sparkles } from 'lucide-react-native';
 import { Button, Card, Section, Chip } from '../components/atoms';
 import { useGardenStore } from '../stores/garden';
 import { colors, typography, radius, getSpacing } from '../core/theme';
-import { initializeCore } from '../core';
+import { initializeCore, errorUtils } from '../core';
 
 export default function HomeScreen() {
   const { plants } = useGardenStore();
@@ -23,12 +25,79 @@ export default function HomeScreen() {
   }, []);
 
   const handleCameraPress = () => {
-    router.push('/analyzing');
+    router.push('/camera');
   };
 
-  const handleGalleryPress = () => {
-    // TODO: Implement image picker
-    router.push('/analyzing');
+  const handleGalleryPress = async () => {
+    try {
+      // Request media library permissions
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (status !== 'granted') {
+        Alert.alert(
+          'ต้องการสิทธิ์เข้าถึง',
+          'กรุณาอนุญาตให้แอปเข้าถึงรูปภาพในเครื่องเพื่อเลือกรูปต้นไม้',
+          [
+            { text: 'ยกเลิก', style: 'cancel' },
+            {
+              text: 'ตั้งค่า',
+              onPress: () => {
+                // On iOS, this will open Settings app
+                if (Platform.OS === 'ios') {
+                  ImagePicker.requestMediaLibraryPermissionsAsync();
+                }
+              }
+            }
+          ]
+        );
+        return;
+      }
+
+      // Launch image picker with optimized settings
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1], // Square aspect ratio for plant images
+        quality: 0.8, // Good quality while keeping file size reasonable
+        selectionLimit: 1,
+        allowsMultipleSelection: false,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const selectedImage = result.assets[0];
+
+        // Validate image size (max 5MB as per core config)
+        if (selectedImage.fileSize && selectedImage.fileSize > 5 * 1024 * 1024) {
+          Alert.alert(
+            'ไฟล์ใหญ่เกินไป',
+            'กรุณาเลือกรูปภาพที่มีขนาดไม่เกิน 5MB',
+            [{ text: 'ตกลง' }]
+          );
+          return;
+        }
+
+        // Store the selected image URI (you can extend this to save to garden store if needed)
+        console.log('Selected image:', selectedImage.uri);
+
+        // Navigate to analyzing screen with image data
+        router.push({
+          pathname: '/analyzing',
+          params: {
+            imageUri: selectedImage.uri,
+            source: 'gallery'
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Image picker error:', error);
+      const errorMessage = errorUtils.formatErrorMessage(error);
+
+      Alert.alert(
+        'เกิดข้อผิดพลาด',
+        errorMessage,
+        [{ text: 'ตกลง' }]
+      );
+    }
   };
 
   const handlePlantPress = (plantId: string) => {
@@ -201,7 +270,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: typography.fontSize['3xl'],
     fontFamily: typography.fontFamily.bold,
-    fontWeight: typography.fontWeight.bold,
+    fontWeight: '700',
     color: colors.text.primary,
     textAlign: 'center',
   },
@@ -233,7 +302,7 @@ const styles = StyleSheet.create({
   scannerTitle: {
     fontSize: typography.fontSize.xl,
     fontFamily: typography.fontFamily.semibold,
-    fontWeight: typography.fontWeight.semibold,
+    fontWeight: '600',
     color: colors.text.primary,
     textAlign: 'center',
     marginBottom: getSpacing(2),
@@ -280,7 +349,7 @@ const styles = StyleSheet.create({
   tipTitle: {
     fontSize: typography.fontSize.sm,
     fontFamily: typography.fontFamily.medium,
-    fontWeight: typography.fontWeight.medium,
+    fontWeight: '500',
     color: colors.text.primary,
     marginBottom: getSpacing(1),
   },

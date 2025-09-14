@@ -28,7 +28,9 @@ export const NotiItemSchema = z.object({
 export type NotiItem = z.infer<typeof NotiItemSchema>;
 
 // Notification creation input
-export type CreateNotificationInput = Omit<NotiItem, 'id' | 'createdAt'>;
+export type CreateNotificationInput = Omit<NotiItem, 'id' | 'createdAt'> & {
+  read?: boolean; // Optional with default false
+};
 
 // Notification filter options
 export interface NotificationFilter {

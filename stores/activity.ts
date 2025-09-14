@@ -20,7 +20,6 @@ interface ActivityState {
   currentPlantId: string | null;
   filter: ActivityFilter | null;
   stats: Record<string, ActivityStats>; // plantId -> stats
-  plantPrefs: Record<string, PlantPrefs>; // plantId -> preferences
   lastUpdated: Date | null;
 }
 
@@ -36,10 +35,8 @@ interface ActivityActions {
   getRecentActivity: (plantId: string, kind?: ActivityKind) => ActivityEntry | null;
   getActivityHistory: (plantId: string, days?: number) => ActivityEntry[];
 
-  // Plant preferences
-  getPlantPrefs: (plantId: string) => PlantPrefs;
-  setPlantPrefs: (plantId: string, prefs: Partial<PlantPrefs>) => void;
-  updateLastActivity: (plantId: string, activity: CreateActivityInput) => void;
+  // Integration with preferences store
+  updateLastActivityPrefs: (plantId: string, activity: CreateActivityInput) => void;
 
   // Filtering and search
   setCurrentPlant: (plantId: string | null) => void;
@@ -68,7 +65,6 @@ const initialState: ActivityState = {
   currentPlantId: null,
   filter: null,
   stats: {},
-  plantPrefs: {},
   lastUpdated: null,
 };
 
@@ -105,7 +101,7 @@ export const useActivityStore = create<ActivityState & ActivityActions>()(
         });
 
         // Update plant preferences with last activity
-        get().updateLastActivity(plantId, activityInput);
+        get().updateLastActivityPrefs(plantId, activityInput);
 
         // Recalculate stats
         get().calculateStats(plantId);
@@ -168,24 +164,11 @@ export const useActivityStore = create<ActivityState & ActivityActions>()(
         return activities.filter(a => new Date(a.dateISO) >= cutoffDate);
       },
 
-      // Plant preferences
-      getPlantPrefs: (plantId) => {
-        return get().plantPrefs[plantId] || {};
-      },
+      // Integration with preferences store
+      updateLastActivityPrefs: (plantId, activity) => {
+        // Import preferences store dynamically to avoid circular dependency
+        const { usePreferencesStore } = require('./preferences');
 
-      setPlantPrefs: (plantId, prefs) => {
-        set((state) => {
-          if (!state.plantPrefs[plantId]) {
-            state.plantPrefs[plantId] = {};
-          }
-          state.plantPrefs[plantId] = {
-            ...state.plantPrefs[plantId],
-            ...prefs,
-          };
-        });
-      },
-
-      updateLastActivity: (plantId, activity) => {
         const prefs: Partial<PlantPrefs> = {
           lastKind: activity.kind,
           lastUnit: activity.unit,
@@ -196,7 +179,7 @@ export const useActivityStore = create<ActivityState & ActivityActions>()(
           prefs.lastNPK = activity.npk;
         }
 
-        get().setPlantPrefs(plantId, prefs);
+        usePreferencesStore.getState().setPlantPrefs(plantId, prefs);
       },
 
       // Filtering and search
@@ -338,7 +321,6 @@ export const useActivityStore = create<ActivityState & ActivityActions>()(
         set((state) => {
           delete state.activities[plantId];
           delete state.stats[plantId];
-          delete state.plantPrefs[plantId];
           state.lastUpdated = new Date();
         });
       },
@@ -353,7 +335,6 @@ export const useActivityStore = create<ActivityState & ActivityActions>()(
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
         activities: state.activities,
-        plantPrefs: state.plantPrefs,
         stats: state.stats,
         lastUpdated: state.lastUpdated,
       }),
@@ -369,11 +350,8 @@ export const usePlantActivities = (plantId: string | null) => {
   );
 };
 
-export const usePlantPrefs = (plantId: string | null) => {
-  return useActivityStore((state) =>
-    plantId ? state.plantPrefs[plantId] || {} : {}
-  );
-};
+// Note: Plant preferences moved to preferences store
+// Use usePlantPreferences from preferences store instead
 
 export const useActivityStats = (plantId: string | null) => {
   return useActivityStore((state) =>
@@ -392,8 +370,6 @@ export const useRecentActivity = (plantId: string | null, kind?: ActivityKind) =
 // Actions for external use
 export const activityActions = {
   addActivity: (activity: CreateActivityInput) => useActivityStore.getState().addActivity(activity),
-  getPlantPrefs: (plantId: string) => useActivityStore.getState().getPlantPrefs(plantId),
-  setPlantPrefs: (plantId: string, prefs: Partial<PlantPrefs>) => useActivityStore.getState().setPlantPrefs(plantId, prefs),
   calculateStats: (plantId: string) => useActivityStore.getState().calculateStats(plantId),
   reset: () => useActivityStore.getState().reset(),
 };

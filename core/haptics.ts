@@ -268,6 +268,7 @@ export const useHaptic = () => {
     trigger: hapticService.trigger.bind(hapticService),
     buttonPress: hapticService.buttonPress.bind(hapticService),
     tabSwitch: hapticService.tabSwitch.bind(hapticService),
+    pullToRefresh: hapticService.pullToRefresh.bind(hapticService),
     success: () => hapticService.trigger('success'),
     error: () => hapticService.trigger('error'),
     warning: () => hapticService.trigger('warning'),

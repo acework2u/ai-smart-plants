@@ -26,6 +26,7 @@ interface GardenActions {
   selectPlant: (id: string | null) => void;
   setSearchQuery: (query: string) => void;
   setFilter: (filter: GardenFilter) => void;
+  searchPlants: (query: string) => Plant[];
 
   // Async operations
   loadPlants: () => Promise<void>;
@@ -39,6 +40,10 @@ interface GardenActions {
   // Statistics and analytics
   calculateStats: () => void;
   getHealthySummary: () => { healthy: number; warning: number; critical: number };
+
+  // Analysis integration
+  addPlantFromScan: (plantData: CreatePlantInput, analysisId?: string) => string;
+  updatePlantFromAnalysis: (plantId: string, analysisData: any) => void;
 
   // Utility actions
   clearError: () => void;
@@ -138,6 +143,18 @@ export const useGardenStore = create<GardenState & GardenActions>()(
 
       setFilter: (filter) => {
         set({ filter });
+      },
+
+      searchPlants: (query) => {
+        const plants = get().plants;
+        if (!query.trim()) return plants;
+
+        const searchTerm = query.toLowerCase();
+        return plants.filter(plant =>
+          plant.name.toLowerCase().includes(searchTerm) ||
+          plant.scientificName?.toLowerCase().includes(searchTerm) ||
+          plant.status.toLowerCase().includes(searchTerm)
+        );
       },
 
       // Async operations
@@ -259,6 +276,67 @@ export const useGardenStore = create<GardenState & GardenActions>()(
         };
       },
 
+      // Analysis integration
+      addPlantFromScan: (plantData, analysisId) => {
+        const plantId = crypto.randomUUID();
+        const newPlant: Plant = {
+          ...plantData,
+          id: plantId,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          metadata: {
+            ...plantData.metadata,
+            analysisId,
+            source: 'camera_scan',
+          },
+        };
+
+        set((state) => {
+          state.plants.push(newPlant);
+          state.lastUpdated = new Date();
+          state.error = null;
+        });
+
+        get().calculateStats();
+
+        console.log('Plant added from scan:', newPlant.name, 'ID:', plantId);
+        return plantId;
+      },
+
+      updatePlantFromAnalysis: (plantId, analysisData) => {
+        set((state) => {
+          const plantIndex = state.plants.findIndex((p: Plant) => p.id === plantId);
+          if (plantIndex !== -1) {
+            const plant = state.plants[plantIndex];
+
+            state.plants[plantIndex] = {
+              ...plant,
+              status: analysisData.healthStatus || plant.status,
+              updatedAt: new Date(),
+              metadata: {
+                ...plant.metadata,
+                analysisId: analysisData.analysisId,
+                healthScore: analysisData.healthScore,
+                lastAnalysis: new Date(),
+                aiRecommendations: analysisData.recommendations?.slice(0, 3),
+                urgentActions: analysisData.urgentActions,
+              },
+            };
+
+            // Update selected plant if it's the one being updated
+            if (state.selectedPlant?.id === plantId) {
+              state.selectedPlant = state.plants[plantIndex];
+            }
+
+            state.lastUpdated = new Date();
+            state.error = null;
+          }
+        });
+
+        get().calculateStats();
+        console.log('Plant updated from analysis:', plantId);
+      },
+
       // Utility actions
       clearError: () => set({ error: null }),
 
@@ -325,7 +403,9 @@ export const useHealthyPlantsCount = () => {
 // Actions for external use
 export const gardenActions = {
   addPlant: (plant: CreatePlantInput) => useGardenStore.getState().addPlant(plant),
+  addPlantFromScan: (plantData: CreatePlantInput, analysisId?: string) => useGardenStore.getState().addPlantFromScan(plantData, analysisId),
   updatePlant: (id: string, updates: UpdatePlantInput) => useGardenStore.getState().updatePlant(id, updates),
+  updatePlantFromAnalysis: (plantId: string, analysisData: any) => useGardenStore.getState().updatePlantFromAnalysis(plantId, analysisData),
   deletePlant: (id: string) => useGardenStore.getState().deletePlant(id),
   selectPlant: (id: string | null) => useGardenStore.getState().selectPlant(id),
   loadPlants: () => useGardenStore.getState().loadPlants(),

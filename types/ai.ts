@@ -1,6 +1,9 @@
 import { z } from 'zod';
 import { PlantStatus } from './garden';
 
+// Re-export PlantStatus for external use
+export { PlantStatus };
+
 // AI analysis confidence levels
 export type ConfidenceLevel = 'very_low' | 'low' | 'medium' | 'high' | 'very_high';
 
@@ -71,6 +74,7 @@ export const AnalysisMetadataSchema = z.object({
     season: z.enum(['spring', 'summer', 'autumn', 'winter']),
     month: z.number().min(1).max(12),
     region: z.string(),
+    dayLength: z.number().optional(),
   }).optional(),
   userContext: z.object({
     experienceLevel: z.enum(['beginner', 'intermediate', 'advanced']).optional(),

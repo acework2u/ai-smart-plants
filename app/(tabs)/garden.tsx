@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
   plantName: {
     fontSize: typography.fontSize.base,
     fontFamily: typography.fontFamily.semibold,
-    fontWeight: typography.fontWeight.semibold,
+    fontWeight: '600',
     color: colors.text.primary,
     marginBottom: getSpacing(1),
   },
@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: typography.fontSize.xl,
     fontFamily: typography.fontFamily.semibold,
-    fontWeight: typography.fontWeight.semibold,
+    fontWeight: '600',
     color: colors.text.primary,
     marginTop: getSpacing(4),
     marginBottom: getSpacing(2),
