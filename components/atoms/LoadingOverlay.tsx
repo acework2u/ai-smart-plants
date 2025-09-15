@@ -82,7 +82,7 @@ export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
             style={[
               styles.spinner,
               {
-                borderColor: theme.colors.gray[300],
+                borderColor: theme.colors.gray300,
                 borderTopColor: theme.colors.primary,
                 transform: [{ rotate: spin }]
               }

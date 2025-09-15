@@ -350,14 +350,14 @@ export const shadows = {
 // Component sizes
 export const sizes = {
   button: {
-    sm: { height: 36, paddingHorizontal: 12 }, // spacing(3)
-    md: { height: 44, paddingHorizontal: 16 }, // spacing(4)
-    lg: { height: 52, paddingHorizontal: 24 }, // spacing(6)
+    sm: { height: 36, paddingHorizontal: spacing[3] },
+    md: { height: 44, paddingHorizontal: spacing[4] },
+    lg: { height: 52, paddingHorizontal: spacing[6] },
   },
   input: {
-    sm: { height: 36, paddingHorizontal: 12 }, // spacing(3)
-    md: { height: 44, paddingHorizontal: 16 }, // spacing(4)
-    lg: { height: 52, paddingHorizontal: 16 }, // spacing(4)
+    sm: { height: 36, paddingHorizontal: spacing[3] },
+    md: { height: 44, paddingHorizontal: spacing[4] },
+    lg: { height: 52, paddingHorizontal: spacing[4] },
   },
   icon: {
     xs: 16,
@@ -497,7 +497,6 @@ export const lightTheme: Theme = {
   colors: lightColors,
   typography,
   spacing,
-  spacingMap,
   radius,
   shadows,
   sizes,
@@ -512,7 +511,6 @@ export const darkTheme: Theme = {
   colors: darkColors,
   typography,
   spacing,
-  spacingMap,
   radius,
   shadows,
   sizes,
@@ -537,8 +535,8 @@ export const themeUtils = {
     return `rgba(${r}, ${g}, ${b}, ${opacity})`;
   },
 
-  // Get spacing value (now just aliases the main spacing function)
-  getSpacing: spacing,
+  // Get spacing value
+  getSpacing: (multiplier: number): number => spacing[multiplier as keyof typeof spacing] || multiplier * 4,
 
   // Get responsive value based on screen width
   responsive: <T>(screenWidth: number, values: { sm?: T; md?: T; lg?: T; xl?: T; default: T }): T => {
@@ -551,22 +549,22 @@ export const themeUtils = {
 
   // Get activity color
   getActivityColor: (activityKind: string): string => {
-    return lightColors.activity[activityKind as keyof typeof lightColors.activity] || lightColors.gray[500];
+    return colors.activity[activityKind as keyof typeof colors.activity] || colors.gray[500];
   },
 
   // Get status color
   getStatusColor: (status: 'Healthy' | 'Warning' | 'Critical'): string => {
     const statusMap = {
-      'Healthy': lightColors.healthy,
-      'Warning': lightColors.warningStatus,
-      'Critical': lightColors.critical,
+      'Healthy': colors.healthy,
+      'Warning': colors.warningStatus,
+      'Critical': colors.critical,
     };
-    return statusMap[status] || lightColors.gray[500];
+    return statusMap[status] || colors.gray[500];
   },
 
   // Get notification color
   getNotificationColor: (type: string): string => {
-    return lightColors.notification[type as keyof typeof lightColors.notification] || lightColors.gray[500];
+    return colors.notification[type as keyof typeof colors.notification] || colors.gray[500];
   },
 
   // Platform-specific styles

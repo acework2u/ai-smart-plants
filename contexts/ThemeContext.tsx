@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Appearance, ColorSchemeName } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors as lightColors } from '../core/theme';
+import { lightTheme as coreTheme, darkTheme as coreDarkTheme, spacing } from '../core/theme';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 
@@ -12,13 +12,28 @@ export interface ThemeColors {
 
   // Background colors
   background: string;
-  surface: string;
   card: string;
 
-  // Text colors
-  text: string;
+  // Surface variants
+  surface: {
+    primary: string;
+    elevated: string;
+    disabled: string;
+  };
+
+  // Text colors (legacy)
   textSecondary: string;
   textMuted: string;
+
+  // Text variants
+  text: {
+    primary: string;
+    secondary: string;
+    tertiary: string;
+    disabled: string;
+    inverse: string;
+    link: string;
+  };
 
   // Status colors
   success: string;
@@ -47,11 +62,21 @@ export interface ThemeColors {
   // Interactive elements
   ripple: string;
   overlay: string;
+
+  // Background variants
+  background: {
+    primary: string;
+    secondary: string;
+    tertiary: string;
+    overlay: string;
+    overlayLight: string;
+  };
 }
 
 export interface Theme {
   colors: ThemeColors;
   isDark: boolean;
+  spacing: typeof spacing;
 }
 
 const lightTheme: Theme = {
@@ -60,12 +85,25 @@ const lightTheme: Theme = {
     primarySoft: '#dcfce7',
 
     background: '#ffffff',
-    surface: '#ffffff',
     card: '#ffffff',
 
-    text: '#111827',
+    surface: {
+      primary: '#ffffff',
+      elevated: '#ffffff',
+      disabled: '#f3f4f6',
+    },
+
     textSecondary: '#374151',
     textMuted: '#6b7280',
+
+    text: {
+      primary: '#111827',
+      secondary: '#374151',
+      tertiary: '#6b7280',
+      disabled: '#9ca3af',
+      inverse: '#ffffff',
+      link: '#3b82f6',
+    },
 
     success: '#10b981',
     warning: '#f59e0b',
@@ -90,8 +128,17 @@ const lightTheme: Theme = {
 
     ripple: 'rgba(22, 163, 74, 0.1)',
     overlay: 'rgba(0, 0, 0, 0.5)',
+
+    background: {
+      primary: '#ffffff',
+      secondary: '#f9fafb',
+      tertiary: '#f3f4f6',
+      overlay: 'rgba(0, 0, 0, 0.5)',
+      overlayLight: 'rgba(0, 0, 0, 0.3)',
+    },
   },
   isDark: false,
+  spacing,
 };
 
 const darkTheme: Theme = {
@@ -100,12 +147,25 @@ const darkTheme: Theme = {
     primarySoft: '#14532d',
 
     background: '#0f1419',
-    surface: '#1f2937',
     card: '#374151',
 
-    text: '#f9fafb',
+    surface: {
+      primary: '#1f2937',
+      elevated: '#374151',
+      disabled: '#4b5563',
+    },
+
     textSecondary: '#e5e7eb',
     textMuted: '#9ca3af',
+
+    text: {
+      primary: '#f9fafb',
+      secondary: '#e5e7eb',
+      tertiary: '#d1d5db',
+      disabled: '#9ca3af',
+      inverse: '#111827',
+      link: '#60a5fa',
+    },
 
     success: '#10b981',
     warning: '#f59e0b',
@@ -130,8 +190,17 @@ const darkTheme: Theme = {
 
     ripple: 'rgba(34, 197, 94, 0.1)',
     overlay: 'rgba(0, 0, 0, 0.7)',
+
+    background: {
+      primary: '#0f1419',
+      secondary: '#1f2937',
+      tertiary: '#374151',
+      overlay: 'rgba(0, 0, 0, 0.7)',
+      overlayLight: 'rgba(0, 0, 0, 0.5)',
+    },
   },
   isDark: true,
+  spacing,
 };
 
 interface ThemeContextType {

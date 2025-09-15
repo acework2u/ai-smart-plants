@@ -9,7 +9,7 @@ module.exports = {
     '**/__tests__/**/*.(ts|tsx|js)',
     '**/*.(test|spec).(ts|tsx|js)',
   ],
-  moduleNameMapping: {
+  moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
     '^@components/(.*)$': '<rootDir>/components/$1',
     '^@stores/(.*)$': '<rootDir>/stores/$1',
@@ -35,7 +35,7 @@ module.exports = {
       statements: 70,
     },
   },
-  testEnvironment: 'jsdom',
+  testEnvironment: 'node',
   transformIgnorePatterns: [
     'node_modules/(?!(react-native|@react-native|expo|@expo|react-native-reanimated|react-native-gesture-handler|react-native-safe-area-context|react-native-screens|@react-navigation|react-native-svg|react-native-skeleton-placeholder)/)',
   ],

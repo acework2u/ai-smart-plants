@@ -150,8 +150,8 @@ export default function HomeScreen() {
       <SafeAreaView style={styles.container}>
         <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
           <View style={styles.header}>
-            <View style={{ height: 36, width: '60%', backgroundColor: theme.colors.gray[300], borderRadius: 8 }} />
-            <View style={{ height: 20, width: '40%', backgroundColor: theme.colors.gray[200], borderRadius: 6, marginTop: 8 }} />
+            <View style={{ height: 36, width: '60%', backgroundColor: theme.colors.gray300, borderRadius: 8 }} />
+            <View style={{ height: 20, width: '40%', backgroundColor: theme.colors.gray200, borderRadius: 6, marginTop: 8 }} />
           </View>
           <GardenGridSkeleton count={4} />
         </ScrollView>
@@ -272,7 +272,7 @@ export default function HomeScreen() {
           {plants.length === 0 && (
             <Card style={styles.emptyState} variant="flat">
               <View style={styles.emptyStateContent}>
-                <Leaf size={48} color={theme.colors.gray[400]} />
+                <Leaf size={48} color={theme.colors.gray400} />
                 <Text style={styles.emptyStateTitle}>ยังไม่มีต้นไม้</Text>
                 <Text style={styles.emptyStateSubtitle}>
                   เริ่มต้นด้วยการสแกนต้นไม้แรกของคุณ

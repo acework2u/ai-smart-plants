@@ -1,3 +1,4 @@
+import React from 'react';
 import { Platform } from 'react-native';
 import { performanceMonitor } from './performance';
 
@@ -403,7 +404,7 @@ export function withMemoryTracking<T extends object>(
       };
     }, []);
 
-    return <Component {...props} ref={ref} />;
+    return React.createElement(Component, { ...props, ref });
   });
 }
 

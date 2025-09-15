@@ -1,3 +1,4 @@
+import React from 'react';
 import { InteractionManager, Platform } from 'react-native';
 
 // Performance utilities for Smart Plant AI
@@ -72,7 +73,7 @@ export function withPerformanceMonitoring<T extends object>(
       monitor.endMeasure(`${componentName}_render`);
     });
 
-    return <Component {...props} ref={ref} />;
+    return React.createElement(Component, { ...props, ref });
   });
 }
 

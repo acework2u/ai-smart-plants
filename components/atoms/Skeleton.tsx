@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, ViewStyle } from 'react-native';
 import SkeletonPlaceholder from 'react-native-skeleton-placeholder';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../contexts/ThemeContext';
-import { spacing } from '../../core/theme';
 
 interface SkeletonProps {
   width?: number | string;
@@ -21,6 +21,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({
 
   return (
     <SkeletonPlaceholder
+      LinearGradientComponent={LinearGradient}
       backgroundColor={theme.isDark ? '#374151' : '#f3f4f6'}
       highlightColor={theme.isDark ? '#4b5563' : '#ffffff'}
       speed={1200}
@@ -48,8 +49,8 @@ export const PlantCardSkeleton: React.FC = () => {
       style={{
         backgroundColor: theme.colors.card,
         borderRadius: 16,
-        padding: spacing(4),
-        marginBottom: spacing(3),
+        padding: theme.spacing(4),
+        marginBottom: theme.spacing(3),
         shadowColor: theme.colors.black,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: theme.isDark ? 0.3 : 0.1,
@@ -58,6 +59,7 @@ export const PlantCardSkeleton: React.FC = () => {
       }}
     >
       <SkeletonPlaceholder
+        LinearGradientComponent={LinearGradient}
         backgroundColor={theme.isDark ? '#374151' : '#f3f4f6'}
         highlightColor={theme.isDark ? '#4b5563' : '#ffffff'}
         speed={1200}
@@ -73,14 +75,14 @@ export const PlantCardSkeleton: React.FC = () => {
           />
 
           {/* Plant Info */}
-          <View style={{ flex: 1, marginLeft: spacing(3) }}>
+          <View style={{ flex: 1, marginLeft: theme.spacing(3) }}>
             {/* Plant Name */}
             <View
               style={{
                 width: '70%',
                 height: 18,
                 borderRadius: 4,
-                marginBottom: spacing(2),
+                marginBottom: theme.spacing(2),
               }}
             />
 
@@ -90,7 +92,7 @@ export const PlantCardSkeleton: React.FC = () => {
                 width: '85%',
                 height: 14,
                 borderRadius: 4,
-                marginBottom: spacing(2),
+                marginBottom: theme.spacing(2),
               }}
             />
 
@@ -108,7 +110,7 @@ export const PlantCardSkeleton: React.FC = () => {
         {/* Health Score Bar */}
         <View
           style={{
-            marginTop: spacing(3),
+            marginTop: theme.spacing(3),
             height: 8,
             borderRadius: 4,
           }}
@@ -127,13 +129,14 @@ export const ActivityRowSkeleton: React.FC = () => {
       style={{
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: spacing(3),
-        paddingHorizontal: spacing(4),
+        paddingVertical: theme.spacing(3),
+        paddingHorizontal: theme.spacing(4),
         borderBottomWidth: 1,
         borderBottomColor: theme.colors.divider,
       }}
     >
       <SkeletonPlaceholder
+        LinearGradientComponent={LinearGradient}
         backgroundColor={theme.isDark ? '#374151' : '#f3f4f6'}
         highlightColor={theme.isDark ? '#4b5563' : '#ffffff'}
         speed={1200}
@@ -144,7 +147,7 @@ export const ActivityRowSkeleton: React.FC = () => {
             width: 40,
             height: 40,
             borderRadius: 20,
-            marginRight: spacing(3),
+            marginRight: theme.spacing(3),
           }}
         />
 
@@ -156,7 +159,7 @@ export const ActivityRowSkeleton: React.FC = () => {
               width: '60%',
               height: 16,
               borderRadius: 4,
-              marginBottom: spacing(1),
+              marginBottom: theme.spacing(1),
             }}
           />
 
@@ -191,12 +194,13 @@ export const NotificationSkeleton: React.FC = () => {
     <View
       style={{
         flexDirection: 'row',
-        padding: spacing(4),
+        padding: theme.spacing(4),
         borderBottomWidth: 1,
         borderBottomColor: theme.colors.divider,
       }}
     >
       <SkeletonPlaceholder
+        LinearGradientComponent={LinearGradient}
         backgroundColor={theme.isDark ? '#374151' : '#f3f4f6'}
         highlightColor={theme.isDark ? '#4b5563' : '#ffffff'}
         speed={1200}
@@ -207,7 +211,7 @@ export const NotificationSkeleton: React.FC = () => {
             width: 36,
             height: 36,
             borderRadius: 18,
-            marginRight: spacing(3),
+            marginRight: theme.spacing(3),
           }}
         />
 
@@ -219,7 +223,7 @@ export const NotificationSkeleton: React.FC = () => {
               width: '70%',
               height: 16,
               borderRadius: 4,
-              marginBottom: spacing(1),
+              marginBottom: theme.spacing(1),
             }}
           />
 
@@ -229,7 +233,7 @@ export const NotificationSkeleton: React.FC = () => {
               width: '90%',
               height: 12,
               borderRadius: 4,
-              marginBottom: spacing(1),
+              marginBottom: theme.spacing(1),
             }}
           />
 
@@ -248,10 +252,12 @@ export const NotificationSkeleton: React.FC = () => {
 };
 
 // Garden Grid Skeleton
-export const GardenGridSkeleton: React.FC = () => {
+export const GardenGridSkeleton: React.FC<{ count?: number }> = ({ count = 6 }) => {
+  const { theme } = useTheme();
+
   return (
-    <View style={{ padding: spacing(4) }}>
-      {Array.from({ length: 6 }).map((_, index) => (
+    <View style={{ padding: theme.spacing(4) }}>
+      {Array.from({ length: count }).map((_, index) => (
         <PlantCardSkeleton key={index} />
       ))}
     </View>
@@ -290,11 +296,12 @@ export const ChartSkeleton: React.FC<{ height?: number }> = ({ height = 220 }) =
         height,
         backgroundColor: theme.colors.card,
         borderRadius: 16,
-        padding: spacing(4),
-        marginVertical: spacing(2),
+        padding: theme.spacing(4),
+        marginVertical: theme.spacing(2),
       }}
     >
       <SkeletonPlaceholder
+        LinearGradientComponent={LinearGradient}
         backgroundColor={theme.isDark ? '#374151' : '#f3f4f6'}
         highlightColor={theme.isDark ? '#4b5563' : '#ffffff'}
         speed={1200}
@@ -305,7 +312,7 @@ export const ChartSkeleton: React.FC<{ height?: number }> = ({ height = 220 }) =
             width: '50%',
             height: 16,
             borderRadius: 4,
-            marginBottom: spacing(4),
+            marginBottom: theme.spacing(4),
           }}
         />
 
