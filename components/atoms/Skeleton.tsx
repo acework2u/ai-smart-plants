@@ -3,6 +3,7 @@ import { View, ViewStyle } from 'react-native';
 import SkeletonPlaceholder from 'react-native-skeleton-placeholder';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../contexts/ThemeContext';
+import Constants from 'expo-constants';
 
 interface SkeletonProps {
   width?: number | string;
@@ -18,13 +19,15 @@ export const Skeleton: React.FC<SkeletonProps> = ({
   style,
 }) => {
   const { theme } = useTheme();
+  const isExpoGo = Constants.appOwnership === 'expo';
+  const skeletonSpeed = isExpoGo ? 0 : 1200;
 
   return (
     <SkeletonPlaceholder
       LinearGradientComponent={LinearGradient}
       backgroundColor={theme.isDark ? '#374151' : '#f3f4f6'}
-      highlightColor={theme.isDark ? '#4b5563' : '#ffffff'}
-      speed={1200}
+      highlightColor={isExpoGo ? undefined : theme.isDark ? '#4b5563' : '#ffffff'}
+      speed={skeletonSpeed}
     >
       <View
         style={[
@@ -43,6 +46,8 @@ export const Skeleton: React.FC<SkeletonProps> = ({
 // Plant Card Skeleton
 export const PlantCardSkeleton: React.FC = () => {
   const { theme } = useTheme();
+  const isExpoGo = Constants.appOwnership === 'expo';
+  const skeletonSpeed = isExpoGo ? 0 : 1200;
 
   return (
     <View
@@ -61,8 +66,8 @@ export const PlantCardSkeleton: React.FC = () => {
       <SkeletonPlaceholder
         LinearGradientComponent={LinearGradient}
         backgroundColor={theme.isDark ? '#374151' : '#f3f4f6'}
-        highlightColor={theme.isDark ? '#4b5563' : '#ffffff'}
-        speed={1200}
+        highlightColor={isExpoGo ? undefined : theme.isDark ? '#4b5563' : '#ffffff'}
+        speed={skeletonSpeed}
       >
         <View style={{ flexDirection: 'row' }}>
           {/* Plant Image */}
@@ -123,6 +128,8 @@ export const PlantCardSkeleton: React.FC = () => {
 // Activity Row Skeleton
 export const ActivityRowSkeleton: React.FC = () => {
   const { theme } = useTheme();
+  const isExpoGo = Constants.appOwnership === 'expo';
+  const skeletonSpeed = isExpoGo ? 0 : 1200;
 
   return (
     <View
@@ -138,8 +145,8 @@ export const ActivityRowSkeleton: React.FC = () => {
       <SkeletonPlaceholder
         LinearGradientComponent={LinearGradient}
         backgroundColor={theme.isDark ? '#374151' : '#f3f4f6'}
-        highlightColor={theme.isDark ? '#4b5563' : '#ffffff'}
-        speed={1200}
+        highlightColor={isExpoGo ? undefined : theme.isDark ? '#4b5563' : '#ffffff'}
+        speed={skeletonSpeed}
       >
         {/* Activity Icon */}
         <View
@@ -189,6 +196,8 @@ export const ActivityRowSkeleton: React.FC = () => {
 // Notification Item Skeleton
 export const NotificationSkeleton: React.FC = () => {
   const { theme } = useTheme();
+  const isExpoGo = Constants.appOwnership === 'expo';
+  const skeletonSpeed = isExpoGo ? 0 : 1200;
 
   return (
     <View
@@ -202,8 +211,8 @@ export const NotificationSkeleton: React.FC = () => {
       <SkeletonPlaceholder
         LinearGradientComponent={LinearGradient}
         backgroundColor={theme.isDark ? '#374151' : '#f3f4f6'}
-        highlightColor={theme.isDark ? '#4b5563' : '#ffffff'}
-        speed={1200}
+        highlightColor={isExpoGo ? undefined : theme.isDark ? '#4b5563' : '#ffffff'}
+        speed={skeletonSpeed}
       >
         {/* Notification Icon */}
         <View
@@ -289,6 +298,8 @@ export const NotificationListSkeleton: React.FC = () => {
 // Analytics Chart Skeleton
 export const ChartSkeleton: React.FC<{ height?: number }> = ({ height = 220 }) => {
   const { theme } = useTheme();
+  const isExpoGo = Constants.appOwnership === 'expo';
+  const skeletonSpeed = isExpoGo ? 0 : 1200;
 
   return (
     <View
@@ -303,8 +314,8 @@ export const ChartSkeleton: React.FC<{ height?: number }> = ({ height = 220 }) =
       <SkeletonPlaceholder
         LinearGradientComponent={LinearGradient}
         backgroundColor={theme.isDark ? '#374151' : '#f3f4f6'}
-        highlightColor={theme.isDark ? '#4b5563' : '#ffffff'}
-        speed={1200}
+        highlightColor={isExpoGo ? undefined : theme.isDark ? '#4b5563' : '#ffffff'}
+        speed={skeletonSpeed}
       >
         {/* Chart Title */}
         <View
