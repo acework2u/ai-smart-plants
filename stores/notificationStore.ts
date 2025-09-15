@@ -11,15 +11,28 @@ import {
   NotificationStats,
   formatNotificationTime,
   validateNotification,
+  ScheduledNotification,
+  PlantNotificationPreferences,
+  GlobalNotificationPreferences,
+  WeatherContext,
+  SeasonalCareConfig,
+  NotificationBatch,
 } from '../types/notifications';
 import { ActivityKind } from '../types/activity';
 import { STORAGE_KEYS } from '../types';
+import NotificationScheduler from '../services/NotificationScheduler';
+import { Plant } from '../types/garden';
 
 interface NotificationState {
   // State
   notifications: NotiItem[];
+  scheduledNotifications: ScheduledNotification[];
+  plantPreferences: Record<string, PlantNotificationPreferences>;
+  globalPreferences: GlobalNotificationPreferences;
+  weatherContext?: WeatherContext;
   filter: NotiType | 'all';
   lastRead: Date | null;
+  scheduler?: NotificationScheduler;
 
   // Actions
   addNotification: (notification: CreateNotificationInput) => void;
@@ -40,14 +53,126 @@ interface NotificationState {
   getNotificationsByType: (type: NotiType) => NotiItem[];
   getNotificationsByPlant: (plantId: string) => NotiItem[];
 
-  // Scheduling Actions
+  // Enhanced Scheduling Actions
   scheduleNotification: (notification: CreateNotificationInput & { scheduledFor: Date }) => Promise<string>;
   cancelScheduledNotification: (notificationId: string) => Promise<void>;
+  scheduleWateringReminder: (plant: Plant) => Promise<string>;
+  scheduleFertilizerReminder: (plant: Plant) => Promise<string>;
+  scheduleHealthCheckReminder: (plant: Plant) => Promise<string>;
+  scheduleAchievementNotification: (achievement: any) => Promise<string>;
+  scheduleAITipNotification: (tip: any) => Promise<string>;
+
+  // Preferences Management
+  updateGlobalPreferences: (preferences: Partial<GlobalNotificationPreferences>) => Promise<void>;
+  updatePlantPreferences: (plantId: string, preferences: PlantNotificationPreferences) => Promise<void>;
+  getPlantPreferences: (plantId: string) => PlantNotificationPreferences;
+  initializeDefaultPlantPreferences: (plantId: string, plantName: string) => PlantNotificationPreferences;
+
+  // Weather Integration
+  updateWeatherContext: (weather: WeatherContext) => Promise<void>;
+
+  // Scheduler Management
+  initializeScheduler: () => Promise<void>;
+  getScheduledNotifications: () => ScheduledNotification[];
+  getNotificationHistory: (limit?: number) => ScheduledNotification[];
+  cancelAllNotificationsForPlant: (plantId: string) => Promise<void>;
 
   // Bulk Actions
   markMultipleAsRead: (ids: string[]) => void;
   removeMultiple: (ids: string[]) => void;
 }
+
+// Default global notification preferences
+const createDefaultGlobalPreferences = (): GlobalNotificationPreferences => ({
+  enabled: true,
+  types: {
+    reminder: true,
+    ai: true,
+    alert: true,
+    achievement: true,
+    system: false,
+  },
+  timing: {
+    quietHours: {
+      enabled: true,
+      start: '22:00',
+      end: '06:00',
+    },
+    preferredTime: '08:00',
+    daysOfWeek: [0, 1, 2, 3, 4, 5, 6],
+  },
+  delivery: {
+    push: true,
+    sound: true,
+    vibration: true,
+    badge: true,
+  },
+  smartScheduling: {
+    enabled: true,
+    weatherIntegration: true,
+    seasonalAdjustments: true,
+    batchSimilarNotifications: true,
+    priorityBasedDelivery: true,
+  },
+  globalDND: {
+    enabled: true,
+    startTime: '22:00',
+    endTime: '06:00',
+    allowUrgent: true,
+    allowAchievements: false,
+  },
+  deliveryWindows: {
+    morningStart: '07:00',
+    morningEnd: '09:00',
+    eveningStart: '17:00',
+    eveningEnd: '19:00',
+  },
+  limits: {
+    maxPerHour: 5,
+    maxPerDay: 20,
+    cooldownBetweenNotifications: 5,
+  },
+});
+
+// Default seasonal care configurations
+const createDefaultSeasonalConfigs = (): Record<string, SeasonalCareConfig> => ({
+  spring: {
+    season: 'spring',
+    adjustments: {
+      wateringMultiplier: 1.2,
+      fertilizerMultiplier: 0.8,
+      healthCheckFrequency: 3,
+      tips: ['ฤดูใบไม้ผลิเป็นช่วงที่พืชเติบโตเร็ว', 'เพิ่มการรดน้ำเล็กน้อย'],
+    },
+  },
+  summer: {
+    season: 'summer',
+    adjustments: {
+      wateringMultiplier: 1.5,
+      fertilizerMultiplier: 1.2,
+      healthCheckFrequency: 2,
+      tips: ['ฤดูร้อนต้องดูแลความชื้นให้มาก', 'หลีกเลี่ยงแสงแดดจัดในช่วงเที่ยง'],
+    },
+  },
+  autumn: {
+    season: 'autumn',
+    adjustments: {
+      wateringMultiplier: 0.8,
+      fertilizerMultiplier: 0.6,
+      healthCheckFrequency: 4,
+      tips: ['ฤดูใบไม้ร่วงลดการรดน้ำลง', 'เตรียมพืชสำหรับฤดูหนาว'],
+    },
+  },
+  winter: {
+    season: 'winter',
+    adjustments: {
+      wateringMultiplier: 0.6,
+      fertilizerMultiplier: 0.4,
+      healthCheckFrequency: 5,
+      tips: ['ฤดูหนาวพืชต้องการน้ำน้อย', 'ระวังโรคราเนื่องจากความชื้นสูง'],
+    },
+  },
+});
 
 // Mock notification data for development
 const createMockNotifications = (): NotiItem[] => [
@@ -136,8 +261,13 @@ export const useNotificationStore = create<NotificationState>()(
     (set, get) => ({
       // Initial state
       notifications: createMockNotifications(),
+      scheduledNotifications: [],
+      plantPreferences: {},
+      globalPreferences: createDefaultGlobalPreferences(),
+      weatherContext: undefined,
       filter: 'all',
       lastRead: null,
+      scheduler: undefined,
 
       // Actions
       addNotification: (notificationInput: CreateNotificationInput) => {
@@ -363,12 +493,221 @@ export const useNotificationStore = create<NotificationState>()(
           })
         );
       },
+
+      // Enhanced Scheduling Actions
+      scheduleWateringReminder: async (plant: Plant) => {
+        const state = get();
+        if (!state.scheduler) {
+          await get().initializeScheduler();
+        }
+
+        const preferences = get().getPlantPreferences(plant.id);
+        return state.scheduler!.scheduleWateringReminder(plant, preferences);
+      },
+
+      scheduleFertilizerReminder: async (plant: Plant) => {
+        const state = get();
+        if (!state.scheduler) {
+          await get().initializeScheduler();
+        }
+
+        const preferences = get().getPlantPreferences(plant.id);
+        return state.scheduler!.scheduleFertilizerReminder(plant, preferences);
+      },
+
+      scheduleHealthCheckReminder: async (plant: Plant) => {
+        const state = get();
+        if (!state.scheduler) {
+          await get().initializeScheduler();
+        }
+
+        const preferences = get().getPlantPreferences(plant.id);
+        return state.scheduler!.scheduleHealthCheckReminder(plant, preferences);
+      },
+
+      scheduleAchievementNotification: async (achievement: any) => {
+        const state = get();
+        if (!state.scheduler) {
+          await get().initializeScheduler();
+        }
+
+        return state.scheduler!.scheduleAchievementNotification(achievement);
+      },
+
+      scheduleAITipNotification: async (tip: any) => {
+        const state = get();
+        if (!state.scheduler) {
+          await get().initializeScheduler();
+        }
+
+        return state.scheduler!.scheduleAITipNotification(tip);
+      },
+
+      // Preferences Management
+      updateGlobalPreferences: async (preferences: Partial<GlobalNotificationPreferences>) => {
+        set(
+          produce((state) => {
+            state.globalPreferences = { ...state.globalPreferences, ...preferences };
+          })
+        );
+
+        const state = get();
+        if (state.scheduler) {
+          await state.scheduler.updateGlobalPreferences(state.globalPreferences);
+        }
+      },
+
+      updatePlantPreferences: async (plantId: string, preferences: PlantNotificationPreferences) => {
+        set(
+          produce((state) => {
+            state.plantPreferences[plantId] = preferences;
+          })
+        );
+
+        const state = get();
+        if (state.scheduler) {
+          await state.scheduler.updatePlantPreferences(plantId, preferences);
+        }
+
+        // Store in AsyncStorage for persistence
+        try {
+          await AsyncStorage.setItem(
+            `${STORAGE_KEYS.PLANT_PREFS_PREFIX}${plantId}`,
+            JSON.stringify(preferences)
+          );
+        } catch (error) {
+          console.error('Failed to save plant preferences:', error);
+        }
+      },
+
+      getPlantPreferences: (plantId: string) => {
+        const state = get();
+        return state.plantPreferences[plantId] || get().initializeDefaultPlantPreferences(plantId, 'ต้นไม้');
+      },
+
+      initializeDefaultPlantPreferences: (plantId: string, plantName: string) => {
+        const defaultPrefs: PlantNotificationPreferences = {
+          plantId,
+          enabled: true,
+          notifications: {
+            watering: {
+              enabled: true,
+              frequency: 3, // every 3 days
+              weatherAware: true,
+              seasonalAdjust: true,
+              advanceNotice: 1, // 1 hour
+            },
+            fertilizer: {
+              enabled: true,
+              frequency: 14, // every 2 weeks
+              seasonalAdjust: true,
+              advanceNotice: 24, // 1 day
+            },
+            healthCheck: {
+              enabled: true,
+              frequency: 7, // weekly
+              criticalAlerts: true,
+              aiTips: true,
+              photoReminders: true,
+            },
+            achievements: {
+              enabled: true,
+              streakMilestones: true,
+              careMilestones: true,
+              discoveryMilestones: true,
+            },
+          },
+          dndSettings: {
+            enabled: false,
+            startTime: '22:00',
+            endTime: '06:00',
+            allowCritical: true,
+          },
+          preferredTimes: {
+            morning: '08:00',
+            evening: '18:00',
+          },
+          batchSimilar: true,
+          maxPerDay: 5,
+        };
+
+        set(
+          produce((state) => {
+            state.plantPreferences[plantId] = defaultPrefs;
+          })
+        );
+
+        return defaultPrefs;
+      },
+
+      // Weather Integration
+      updateWeatherContext: async (weather: WeatherContext) => {
+        set(
+          produce((state) => {
+            state.weatherContext = weather;
+          })
+        );
+
+        const state = get();
+        if (state.scheduler) {
+          await state.scheduler.updateWeatherContext(weather);
+        }
+      },
+
+      // Scheduler Management
+      initializeScheduler: async () => {
+        const state = get();
+
+        if (state.scheduler) {
+          return; // Already initialized
+        }
+
+        try {
+          const scheduler = new NotificationScheduler({
+            globalPreferences: state.globalPreferences,
+            plantPreferences: state.plantPreferences,
+            weatherContext: state.weatherContext,
+            seasonalConfigs: createDefaultSeasonalConfigs(),
+          });
+
+          set(
+            produce((state) => {
+              state.scheduler = scheduler;
+            })
+          );
+
+          console.log('Notification scheduler initialized');
+        } catch (error) {
+          console.error('Failed to initialize scheduler:', error);
+        }
+      },
+
+      getScheduledNotifications: () => {
+        const state = get();
+        return state.scheduler?.getScheduledNotifications() || [];
+      },
+
+      getNotificationHistory: (limit = 50) => {
+        const state = get();
+        return state.scheduler?.getNotificationHistory(limit) || [];
+      },
+
+      cancelAllNotificationsForPlant: async (plantId: string) => {
+        const state = get();
+        if (state.scheduler) {
+          await state.scheduler.cancelAllNotificationsForPlant(plantId);
+        }
+      },
     }),
     {
       name: STORAGE_KEYS.NOTIFICATIONS,
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
         notifications: state.notifications,
+        scheduledNotifications: state.scheduledNotifications,
+        plantPreferences: state.plantPreferences,
+        globalPreferences: state.globalPreferences,
+        weatherContext: state.weatherContext,
         filter: state.filter,
         lastRead: state.lastRead,
       }),

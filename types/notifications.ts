@@ -93,6 +93,92 @@ export interface ReminderConfig {
   message: string;
   enabled: boolean;
   advanceNotice: number; // hours before due
+  customTime?: string; // HH:MM format for custom scheduling
+  weatherDependent?: boolean; // Skip if weather conditions don't require
+  seasonalAdjustment?: boolean; // Adjust frequency based on season
+}
+
+// Per-plant notification preferences
+export interface PlantNotificationPreferences {
+  plantId: string;
+  enabled: boolean;
+  notifications: {
+    watering: {
+      enabled: boolean;
+      frequency: number; // days
+      customSchedule?: {
+        times: string[]; // HH:MM format
+        daysOfWeek: number[]; // 0-6
+      };
+      weatherAware: boolean;
+      seasonalAdjust: boolean;
+      advanceNotice: number; // hours
+    };
+    fertilizer: {
+      enabled: boolean;
+      frequency: number; // days (14, 21, 30 typical)
+      customSchedule?: {
+        times: string[];
+        daysOfWeek: number[];
+      };
+      seasonalAdjust: boolean;
+      advanceNotice: number;
+    };
+    healthCheck: {
+      enabled: boolean;
+      frequency: number; // days
+      criticalAlerts: boolean;
+      aiTips: boolean;
+      photoReminders: boolean;
+    };
+    achievements: {
+      enabled: boolean;
+      streakMilestones: boolean;
+      careMilestones: boolean;
+      discoveryMilestones: boolean;
+    };
+  };
+  dndSettings: {
+    enabled: boolean;
+    startTime: string; // HH:MM
+    endTime: string; // HH:MM
+    allowCritical: boolean; // Allow critical alerts during DND
+  };
+  preferredTimes: {
+    morning: string; // HH:MM (7-9am typical)
+    evening: string; // HH:MM (5-7pm typical)
+  };
+  batchSimilar: boolean; // Group similar notifications
+  maxPerDay: number; // Limit notifications per day per plant
+}
+
+// Global notification preferences (extending existing)
+export interface GlobalNotificationPreferences extends NotificationPreferences {
+  smartScheduling: {
+    enabled: boolean;
+    weatherIntegration: boolean;
+    seasonalAdjustments: boolean;
+    batchSimilarNotifications: boolean;
+    priorityBasedDelivery: boolean;
+  };
+  globalDND: {
+    enabled: boolean;
+    startTime: string; // "22:00"
+    endTime: string; // "06:00"
+    allowUrgent: boolean;
+    allowAchievements: boolean;
+  };
+  deliveryWindows: {
+    morningStart: string; // "07:00"
+    morningEnd: string; // "09:00"
+    eveningStart: string; // "17:00"
+    eveningEnd: string; // "19:00"
+  };
+  limits: {
+    maxPerHour: number;
+    maxPerDay: number;
+    cooldownBetweenNotifications: number; // minutes
+  };
 }
 
 // Achievement notification data
@@ -147,13 +233,82 @@ export interface NotificationTemplate {
 // Notification delivery status
 export interface NotificationDelivery {
   notificationId: string;
-  status: 'pending' | 'sent' | 'delivered' | 'failed' | 'cancelled';
+  status: 'pending' | 'sent' | 'delivered' | 'failed' | 'cancelled' | 'skipped';
   attemptCount: number;
   lastAttempt?: Date;
   errorMessage?: string;
   deliveredAt?: Date;
   interactedAt?: Date;
   interaction?: 'opened' | 'dismissed' | 'action_taken';
+  skipReason?: 'weather' | 'dnd' | 'limit_reached' | 'user_disabled';
+}
+
+// Scheduled notification entry
+export interface ScheduledNotification {
+  id: string;
+  plantId?: string;
+  type: NotiType;
+  category: 'watering' | 'fertilizer' | 'health_check' | 'achievement' | 'ai_tip' | 'system';
+  scheduledFor: Date;
+  actualDelivery?: Date;
+  title: string;
+  message: string;
+  priority: NotiPriority;
+  isRecurring: boolean;
+  recurringConfig?: {
+    frequency: number; // days
+    endDate?: Date;
+    maxOccurrences?: number;
+    currentOccurrence: number;
+  };
+  conditions?: {
+    weatherDependent?: boolean;
+    seasonAware?: boolean;
+    timeWindow?: {
+      start: string; // HH:MM
+      end: string; // HH:MM
+    };
+  };
+  metadata?: Record<string, unknown>;
+  status: 'scheduled' | 'delivered' | 'cancelled' | 'failed' | 'skipped';
+  delivery?: NotificationDelivery;
+}
+
+// Weather context for smart notifications
+export interface WeatherContext {
+  temperature: number;
+  humidity: number;
+  precipitation: number; // mm
+  isRaining: boolean;
+  conditions: 'sunny' | 'cloudy' | 'rainy' | 'stormy';
+  uvIndex: number;
+  windSpeed: number;
+  season: 'spring' | 'summer' | 'autumn' | 'winter';
+  lastUpdated: Date;
+}
+
+// Season-based care adjustments
+export interface SeasonalCareConfig {
+  season: 'spring' | 'summer' | 'autumn' | 'winter';
+  adjustments: {
+    wateringMultiplier: number; // 0.5 = half as often, 2.0 = twice as often
+    fertilizerMultiplier: number;
+    healthCheckFrequency: number; // days
+    tips: string[];
+  };
+}
+
+// Notification batch for grouping similar notifications
+export interface NotificationBatch {
+  id: string;
+  type: 'care_reminders' | 'health_updates' | 'achievements' | 'tips';
+  notifications: ScheduledNotification[];
+  scheduledFor: Date;
+  title: string;
+  summary: string;
+  plantCount: number;
+  delivered: boolean;
+  batchDelivery?: NotificationDelivery;
 }
 
 // Validation functions

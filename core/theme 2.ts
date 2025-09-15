@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 
-// Light theme colors - AI Smart Plants Design System
-export const lightColors = {
+// Color palette - AI Smart Plants Design System
+export const colors = {
   // Brand colors
   primary: '#16a34a', // green-600
   primarySoft: '#dcfce7', // green-100
@@ -89,99 +89,6 @@ export const lightColors = {
     system: '#6b7280', // gray-500
   },
 };
-
-// Dark theme colors - maintaining green accent
-export const darkColors = {
-  // Brand colors - keeping green accent bright for visibility
-  primary: '#22c55e', // green-500 (brighter for dark mode)
-  primarySoft: '#166534', // green-800 (darker version for backgrounds)
-  primaryDark: '#15803d', // green-700
-  primaryLight: '#4ade80', // green-400
-
-  // Neutral palette
-  white: '#ffffff',
-  black: '#000000',
-  transparent: 'transparent',
-
-  // Gray scale - inverted for dark mode
-  gray: {
-    50: '#111827', // dark equivalent
-    100: '#1f2937',
-    200: '#374151',
-    300: '#4b5563',
-    400: '#6b7280',
-    500: '#9ca3af',
-    600: '#d1d5db',
-    700: '#e5e7eb',
-    800: '#f3f4f6',
-    900: '#f9fafb',
-  },
-
-  // Semantic colors - adjusted for dark mode
-  success: '#10b981', // emerald-500
-  warning: '#fbbf24', // amber-400 (slightly brighter)
-  error: '#f87171', // red-400 (slightly brighter)
-  info: '#60a5fa', // blue-400 (slightly brighter)
-
-  // Plant health status colors
-  healthy: '#10b981', // emerald-500
-  warningStatus: '#fbbf24', // amber-400
-  critical: '#f87171', // red-400
-
-  // Background variations - dark theme
-  background: {
-    primary: '#111827', // gray-900
-    secondary: '#1f2937', // gray-800
-    tertiary: '#374151', // gray-700
-    overlay: 'rgba(0, 0, 0, 0.7)',
-    overlayLight: 'rgba(0, 0, 0, 0.5)',
-  },
-
-  // Surface colors - dark theme
-  surface: {
-    primary: '#1f2937', // gray-800
-    elevated: '#374151', // gray-700
-    disabled: '#4b5563', // gray-600
-  },
-
-  // Border colors - dark theme
-  border: {
-    light: '#374151', // gray-700
-    medium: '#4b5563', // gray-600
-    dark: '#6b7280', // gray-500
-  },
-
-  // Text colors - dark theme
-  text: {
-    primary: '#f9fafb', // gray-50
-    secondary: '#e5e7eb', // gray-200
-    tertiary: '#d1d5db', // gray-300
-    disabled: '#9ca3af', // gray-400
-    inverse: '#111827', // gray-900
-    link: '#60a5fa', // blue-400
-  },
-
-  // Activity colors (Thai plant care activities) - adjusted for dark mode
-  activity: {
-    'รดน้ำ': '#60a5fa', // blue-400
-    'ใส่ปุ๋ย': '#10b981', // emerald-500
-    'พ่นยา': '#fbbf24', // amber-400
-    'ย้ายกระถาง': '#a78bfa', // violet-400
-    'ตรวจใบ': '#9ca3af', // gray-400
-  },
-
-  // Notification colors - adjusted for dark mode
-  notification: {
-    reminder: '#60a5fa', // blue-400
-    ai: '#a78bfa', // violet-400
-    alert: '#fbbf24', // amber-400
-    achievement: '#10b981', // emerald-500
-    system: '#9ca3af', // gray-400
-  },
-};
-
-// Legacy export for backward compatibility
-export const colors = lightColors;
 
 // Typography system
 export const typography = {
@@ -367,34 +274,28 @@ export const breakpoints = {
   xl: 1280,
 };
 
-// Theme interface
-export interface Theme {
-  colors: typeof lightColors;
-  typography: typeof typography;
-  spacing: typeof spacing;
-  radius: typeof radius;
-  shadows: typeof shadows;
-  sizes: typeof sizes;
-  animation: typeof animation;
-  zIndex: typeof zIndex;
-  breakpoints: typeof breakpoints;
-  componentStyles: {
-    button: any;
-    card: any;
-    input: any;
-    chip: any;
-  };
-}
+// Theme object combining all design tokens
+export const theme = {
+  colors,
+  typography,
+  spacing,
+  radius,
+  shadows,
+  sizes,
+  animation,
+  zIndex,
+  breakpoints,
+};
 
-// Create themed component styles
-const createComponentStyles = (colors: typeof lightColors) => ({
+// Component-specific theme styles
+export const componentStyles = {
   button: {
     primary: {
       backgroundColor: colors.primary,
       borderColor: colors.primary,
     },
     secondary: {
-      backgroundColor: colors.surface.primary,
+      backgroundColor: colors.white,
       borderColor: colors.border.light,
     },
     ghost: {
@@ -409,13 +310,13 @@ const createComponentStyles = (colors: typeof lightColors) => ({
 
   card: {
     default: {
-      backgroundColor: colors.surface.primary,
+      backgroundColor: colors.white,
       borderColor: colors.border.light,
       borderRadius: radius.lg,
       ...shadows.sm,
     },
     elevated: {
-      backgroundColor: colors.surface.elevated,
+      backgroundColor: colors.white,
       borderColor: colors.border.light,
       borderRadius: radius.lg,
       ...shadows.md,
@@ -424,7 +325,7 @@ const createComponentStyles = (colors: typeof lightColors) => ({
 
   input: {
     default: {
-      backgroundColor: colors.surface.primary,
+      backgroundColor: colors.white,
       borderColor: colors.border.light,
       borderRadius: radius.md,
     },
@@ -450,39 +351,7 @@ const createComponentStyles = (colors: typeof lightColors) => ({
       color: colors.error,
     },
   },
-});
-
-// Light theme
-export const lightTheme: Theme = {
-  colors: lightColors,
-  typography,
-  spacing,
-  radius,
-  shadows,
-  sizes,
-  animation,
-  zIndex,
-  breakpoints,
-  componentStyles: createComponentStyles(lightColors),
 };
-
-// Dark theme
-export const darkTheme: Theme = {
-  colors: darkColors,
-  typography,
-  spacing,
-  radius,
-  shadows,
-  sizes,
-  animation,
-  zIndex,
-  breakpoints,
-  componentStyles: createComponentStyles(darkColors),
-};
-
-// Legacy exports for backward compatibility
-export const theme = lightTheme;
-export const componentStyles = lightTheme.componentStyles;
 
 // Utility functions for working with theme
 export const themeUtils = {

@@ -3,6 +3,7 @@ export * from './garden';
 export * from './activity';
 export * from './notifications';
 export * from './ai';
+export * from './weather';
 
 // Common utility types
 export interface PaginationParams {
