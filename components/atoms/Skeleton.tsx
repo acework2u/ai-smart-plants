@@ -26,7 +26,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({
     <SkeletonPlaceholder
       LinearGradientComponent={LinearGradient}
       backgroundColor={theme.isDark ? '#374151' : '#f3f4f6'}
-      highlightColor={isExpoGo ? undefined : theme.isDark ? '#4b5563' : '#ffffff'}
+      highlightColor={theme.isDark ? '#4b5563' : '#ffffff'}
       speed={skeletonSpeed}
     >
       <View
@@ -66,7 +66,7 @@ export const PlantCardSkeleton: React.FC = () => {
       <SkeletonPlaceholder
         LinearGradientComponent={LinearGradient}
         backgroundColor={theme.isDark ? '#374151' : '#f3f4f6'}
-        highlightColor={isExpoGo ? undefined : theme.isDark ? '#4b5563' : '#ffffff'}
+        highlightColor={theme.isDark ? '#4b5563' : '#ffffff'}
         speed={skeletonSpeed}
       >
         <View style={{ flexDirection: 'row' }}>
@@ -145,7 +145,7 @@ export const ActivityRowSkeleton: React.FC = () => {
       <SkeletonPlaceholder
         LinearGradientComponent={LinearGradient}
         backgroundColor={theme.isDark ? '#374151' : '#f3f4f6'}
-        highlightColor={isExpoGo ? undefined : theme.isDark ? '#4b5563' : '#ffffff'}
+        highlightColor={theme.isDark ? '#4b5563' : '#ffffff'}
         speed={skeletonSpeed}
       >
         {/* Activity Icon */}
@@ -211,7 +211,7 @@ export const NotificationSkeleton: React.FC = () => {
       <SkeletonPlaceholder
         LinearGradientComponent={LinearGradient}
         backgroundColor={theme.isDark ? '#374151' : '#f3f4f6'}
-        highlightColor={isExpoGo ? undefined : theme.isDark ? '#4b5563' : '#ffffff'}
+        highlightColor={theme.isDark ? '#4b5563' : '#ffffff'}
         speed={skeletonSpeed}
       >
         {/* Notification Icon */}
@@ -314,7 +314,7 @@ export const ChartSkeleton: React.FC<{ height?: number }> = ({ height = 220 }) =
       <SkeletonPlaceholder
         LinearGradientComponent={LinearGradient}
         backgroundColor={theme.isDark ? '#374151' : '#f3f4f6'}
-        highlightColor={isExpoGo ? undefined : theme.isDark ? '#4b5563' : '#ffffff'}
+        highlightColor={theme.isDark ? '#4b5563' : '#ffffff'}
         speed={skeletonSpeed}
       >
         {/* Chart Title */}
