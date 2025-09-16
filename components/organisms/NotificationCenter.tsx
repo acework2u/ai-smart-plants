@@ -102,7 +102,8 @@ const NotificationItem: React.FC<{
     // Scale animation
     scale.value = withSpring(0.95, { duration: 100 }, () => {
       scale.value = withSpring(1, { duration: 100 }, () => {
-        runOnJS(onPress)();
+        // Guard and schedule on JS thread safely
+        runOnJS(() => onPress && onPress())();
       });
     });
   };
@@ -117,7 +118,7 @@ const NotificationItem: React.FC<{
 
     // Fade out animation
     opacity.value = withTiming(0, { duration: 200 }, () => {
-      runOnJS(onDismiss)();
+      runOnJS(() => onDismiss && onDismiss())();
     });
   };
 
