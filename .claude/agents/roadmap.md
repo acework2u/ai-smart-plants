@@ -238,6 +238,41 @@ This roadmap outlines the systematic approach to building AI Smart Plants MVP wi
    - *Mitigation:* Strict MVP focus and weekly reviews
    - *Owner:* All agents coordination
 
+---
+
+## 👥 Agents Task Assignments (Current)
+
+Phase 1: HOTFIX (ด่วนมาก)
+- [x] Fix Text Corruption Bug (landing/Garden strings) — Owner: Hotfix Agent
+- [x] Stabilize selectors (Zustand getSnapshot loop) — Owner: State Mgmt Agent
+- [x] Replace crypto.randomUUID across stores with RN-safe UUID — Owner: Platform Agent
+
+Phase 2: UX Enhancement
+- [x] Onboarding redesign + gestures migration (GestureDetector) — Owner: UX Agent 1
+- [x] Loading states & transitions (skeletons, shimmer gating) — Owner: UX Agent 2
+- [x] Garden: search bar + filter chips, header cleanup — Owner: UX Agent 3
+- [ ] Garden polish: clean corrupted strings throughout, consistent header, empty-state copy — Owner: UX Agent 3
+  - Accept: Human‑readable Thai strings, no control chars, dark/light OK
+
+Phase 3: Performance & Optimization
+- [ ] Image optimization sweep (cache keys, sizes, preload hints) — Owner: Perf Agent 1
+  - Accept: No oversized images in lists; smooth scroll (no dropped frames)
+- [ ] List virtualization checks (getItemLayout/keys/cacheExtent) — Owner: Perf Agent 2
+  - Accept: No warnings; memory footprint stable during long scroll
+
+Phase 4: Polish & QA
+- [ ] Micro‑interactions: subtle shadows, status badges for plant cards — Owner: Polish Agent
+- [ ] Accessibility pass (a11y roles/labels/touch targets) — Owner: QA Agent
+- [ ] Copy review (TH/EN), tone consistency — Owner: Content Agent
+
+Phase 5: Dependencies & Build
+- [ ] Align minor versions with Expo SDK 54 (e.g., expo-camera ~17.0.8) — Owner: Build Agent
+- [ ] Verify Reanimated/RNGH configuration (babel/plugin order, cleanup) — Owner: Build Agent
+
+Notes
+- PRs should reference this section and check acceptance criteria.
+- Keep UX edits scoped; avoid store changes unless required.
+
 2. **Integration Complexity**
    - *Mitigation:* Early integration testing
    - *Owner:* All agents collaboration
