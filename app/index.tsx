@@ -189,64 +189,7 @@ export default function HomeScreen() {
 
   const styles = createStyles(theme);
 
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
-          {/* Header Skeleton */}
-          <View style={styles.header}>
-            <Skeleton width="60%" height={36} borderRadius={8} style={{ marginBottom: 8 }} />
-            <Skeleton width="40%" height={20} borderRadius={6} />
-          </View>
-
-          {/* Scanner Card Skeleton */}
-          <Card style={styles.scannerCard} variant="elevated">
-            <View style={styles.scannerContent}>
-              <Skeleton width={64} height={64} borderRadius={32} style={{ marginBottom: 16 }} />
-              <Skeleton width="70%" height={24} borderRadius={6} style={{ marginBottom: 8 }} />
-              <Skeleton width="90%" height={16} borderRadius={4} style={{ marginBottom: 24 }} />
-              <View style={{ flexDirection: 'row', gap: 12 }}>
-                <Skeleton width={120} height={44} borderRadius={8} />
-                <Skeleton width={120} height={44} borderRadius={8} />
-              </View>
-            </View>
-          </Card>
-
-          {/* Tips Section Skeleton */}
-          <View style={styles.section}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <View>
-                <Skeleton width={120} height={20} borderRadius={4} style={{ marginBottom: 4 }} />
-                <Skeleton width={80} height={14} borderRadius={4} />
-              </View>
-              <Skeleton width={60} height={16} borderRadius={4} />
-            </View>
-            <TipsListSkeleton count={3} />
-          </View>
-
-          {/* Recent Plants Skeleton */}
-          <View style={styles.section}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <View>
-                <Skeleton width={100} height={20} borderRadius={4} style={{ marginBottom: 4 }} />
-                <Skeleton width={60} height={14} borderRadius={4} />
-              </View>
-              <Skeleton width={50} height={16} borderRadius={4} />
-            </View>
-            <View style={styles.plantsGrid}>
-              {Array.from({ length: 4 }).map((_, index) => (
-                <View key={index} style={styles.plantCard}>
-                  <Skeleton width={48} height={48} borderRadius={24} style={{ marginBottom: 8 }} />
-                  <Skeleton width="80%" height={14} borderRadius={4} style={{ marginBottom: 8 }} />
-                  <Skeleton width={60} height={24} borderRadius={12} />
-                </View>
-              ))}
-            </View>
-          </View>
-        </ScrollView>
-      </SafeAreaView>
-    );
-  }
+  // Remove early-return skeleton. Use LoadingTransition below to manage loading state.
 
   return (
     <SafeAreaView style={styles.container}>
