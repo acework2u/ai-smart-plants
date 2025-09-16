@@ -5,8 +5,17 @@ import {
   AnalysisMetadata,
   PlantStatus
 } from '../types/ai';
-// Simple ID generator for RN (avoid relying on global crypto)
-const generateId = () => `id-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+// UUID v4 generator (RN-safe, no global crypto)
+const generateId = () => {
+  // eslint-disable-next-line no-bitwise
+  const uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    // eslint-disable-next-line no-bitwise
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+  return uuid;
+};
 
 export interface ScanInput {
   imageUri: string;
