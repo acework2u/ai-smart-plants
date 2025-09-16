@@ -5,7 +5,8 @@ import {
   AnalysisMetadata,
   PlantStatus
 } from '../types/ai';
-// Using crypto.randomUUID() for generating IDs
+// Simple ID generator for RN (avoid relying on global crypto)
+const generateId = () => `id-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 
 export interface ScanInput {
   imageUri: string;
@@ -177,7 +178,7 @@ class MockScanService {
 
       if (mockIssue) {
         issues.push({
-          id: crypto.randomUUID(),
+          id: generateId(),
           type: mockIssue.type,
           severity: mockIssue.severity,
           title: mockIssue.title,
@@ -209,7 +210,7 @@ class MockScanService {
       if (mockRecs.length > 0) {
         const rec = mockRecs[Math.floor(Math.random() * mockRecs.length)];
         recommendations.push({
-          id: crypto.randomUUID(),
+          id: generateId(),
           category,
           priority: Math.floor(Math.random() * 3) + 1,
           title: rec.title,
@@ -229,7 +230,7 @@ class MockScanService {
     issues.forEach(issue => {
       if (issue.treatments && issue.treatments.length > 0) {
         recommendations.push({
-          id: crypto.randomUUID(),
+          id: generateId(),
           category: 'treatment' as const,
           priority: issue.severity === 'critical' ? 5 : issue.severity === 'high' ? 4 : 3,
           title: `รักษา${issue.title}`,
@@ -315,7 +316,7 @@ class MockScanService {
     const metadata = this.generateAnalysisMetadata();
 
     const result: PlantAnalysisResult = {
-      analysisId: crypto.randomUUID(),
+      analysisId: generateId(),
       plantName: plant.name,
       scientificName: plant.scientificName,
       confidence: 0.85 + Math.random() * 0.1,

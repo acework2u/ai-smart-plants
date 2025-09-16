@@ -166,39 +166,27 @@ export default function CameraScreen() {
   // Camera screen
   return (
     <SafeAreaView style={styles.container}>
-      <CameraView
-        style={styles.camera}
-        facing={facing}
-        ref={cameraRef}
-      >
-        {/* Header */}
+      <View style={styles.cameraContainer}>
+        <CameraView style={StyleSheet.absoluteFillObject} facing={facing} ref={cameraRef} />
+
+        {/* Header overlay */}
         <View style={styles.cameraHeader}>
-          <TouchableOpacity
-            style={styles.headerButton}
-            onPress={handleBack}
-          >
+          <TouchableOpacity style={styles.headerButton} onPress={handleBack}>
             <X size={24} color={colors.white} />
           </TouchableOpacity>
           <Text style={styles.cameraTitle}>สแกนต้นไม้</Text>
-          <TouchableOpacity
-            style={styles.headerButton}
-            onPress={toggleCameraFacing}
-          >
+          <TouchableOpacity style={styles.headerButton} onPress={toggleCameraFacing}>
             <RotateCw size={24} color={colors.white} />
           </TouchableOpacity>
         </View>
 
-        {/* Instructions */}
+        {/* Instructions overlay */}
         <View style={styles.instructionsContainer}>
-          <Text style={styles.instructionText}>
-            จัดกรอบให้ต้นไม้อยู่ตรงกลาง
-          </Text>
-          <Text style={styles.instructionSubtext}>
-            ถ่ายรูปใกล้ๆ เพื่อผลการวิเคราะห์ที่แม่นยำ
-          </Text>
+          <Text style={styles.instructionText}>จัดกรอบให้ต้นไม้อยู่ตรงกลาง</Text>
+          <Text style={styles.instructionSubtext}>ถ่ายรูปใกล้ๆ เพื่อผลการวิเคราะห์ที่แม่นยำ</Text>
         </View>
 
-        {/* Camera frame overlay */}
+        {/* Frame overlay */}
         <View style={styles.frameOverlay}>
           <View style={styles.frameCorner} />
           <View style={[styles.frameCorner, styles.frameCornerTopRight]} />
@@ -206,17 +194,12 @@ export default function CameraScreen() {
           <View style={[styles.frameCorner, styles.frameCornerBottomRight]} />
         </View>
 
-        {/* Bottom controls */}
+        {/* Bottom controls overlay */}
         <View style={styles.cameraControls}>
-          {/* Gallery button */}
-          <TouchableOpacity
-            style={styles.galleryButton}
-            onPress={handlePickFromGallery}
-          >
+          <TouchableOpacity style={styles.galleryButton} onPress={handlePickFromGallery}>
             <ImageIcon size={28} color={colors.white} />
           </TouchableOpacity>
 
-          {/* Capture button */}
           <TouchableOpacity
             style={[styles.captureButton, isCapturing && styles.captureButtonDisabled]}
             onPress={handleTakePicture}
@@ -231,10 +214,9 @@ export default function CameraScreen() {
             </View>
           </TouchableOpacity>
 
-          {/* Placeholder for symmetry */}
           <View style={styles.galleryButton} />
         </View>
-      </CameraView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -306,6 +288,9 @@ const styles = StyleSheet.create({
 
   // Camera styles
   camera: {
+    flex: 1,
+  },
+  cameraContainer: {
     flex: 1,
   },
   cameraHeader: {
