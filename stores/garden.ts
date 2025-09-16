@@ -364,14 +364,13 @@ export const useGardenStore = create<GardenState & GardenActions>()(
 );
 
 // Computed selectors (optimized to prevent unnecessary re-renders)
-import shallow from 'zustand/shallow';
+import React from 'react';
 
 export const useFilteredPlants = () => {
-  // Select only the pieces we need; shallow compare to avoid needless re-renders
-  const { plants, filter, searchQuery } = useGardenStore(
-    (state) => ({ plants: state.plants, filter: state.filter, searchQuery: state.searchQuery }),
-    shallow
-  );
+  // Select each piece separately to avoid getSnapshot returning a new object
+  const plants = useGardenStore((state) => state.plants);
+  const filter = useGardenStore((state) => state.filter);
+  const searchQuery = useGardenStore((state) => state.searchQuery);
 
   // Compute a stable, memoized result so getSnapshot returns same reference when inputs unchanged
   const result = React.useMemo(() => {
