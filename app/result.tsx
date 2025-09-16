@@ -35,7 +35,28 @@ export default function ResultScreen() {
   let analysisResult: PlantAnalysisResult | null = null;
   try {
     if (params.analysisResult) {
-      analysisResult = JSON.parse(params.analysisResult as string);
+      const parsed = JSON.parse(params.analysisResult as string);
+      // Rehydrate date fields that were serialized as strings
+      if (parsed) {
+        if (parsed.analysisTimestamp) {
+          parsed.analysisTimestamp = new Date(parsed.analysisTimestamp);
+        }
+        if (Array.isArray(parsed.recommendations)) {
+          parsed.recommendations = parsed.recommendations.map((r: any) => ({
+            ...r,
+            createdAt: r?.createdAt ? new Date(r.createdAt) : undefined,
+            validUntil: r?.validUntil ? new Date(r.validUntil) : undefined,
+          }));
+        }
+        if (Array.isArray(parsed.issues)) {
+          parsed.issues = parsed.issues.map((i: any) => ({
+            ...i,
+            detectedAt: i?.detectedAt ? new Date(i.detectedAt) : undefined,
+            resolvedAt: i?.resolvedAt ? new Date(i.resolvedAt) : undefined,
+          }));
+        }
+      }
+      analysisResult = parsed as PlantAnalysisResult;
     }
   } catch (error) {
     console.error('Failed to parse analysis result:', error);
@@ -76,6 +97,17 @@ export default function ResultScreen() {
       notes: 'ต้นไม้ชนิดนี้เหมาะสำหรับปลูกในบ้าน ใส่แสงทางอ้อม และรดน้ำเมื่อดินแห้ง',
     };
   }
+
+  // Helpers
+  const formatTime = (value: any, locale: string = 'th-TH') => {
+    try {
+      const d = value instanceof Date ? value : new Date(value);
+      if (!d || isNaN(d.getTime())) return '-';
+      return d.toLocaleTimeString(locale);
+    } catch {
+      return '-';
+    }
+  };
 
   const getHealthColor = (status: string) => {
     switch (status) {
@@ -353,7 +385,7 @@ export default function ResultScreen() {
             <View style={styles.metadataItem}>
               <Text style={styles.metadataLabel}>เวลาวิเคราะห์</Text>
               <Text style={styles.metadataValue}>
-                {analysisResult.analysisTimestamp.toLocaleTimeString('th-TH')}
+                {formatTime(analysisResult.analysisTimestamp, 'th-TH')}
               </Text>
             </View>
           </View>
