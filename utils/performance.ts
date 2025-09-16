@@ -73,7 +73,10 @@ export function withPerformanceMonitoring<T extends object>(
       monitor.endMeasure(`${componentName}_render`);
     });
 
-    return React.createElement(Component, { ...props, ref });
+    return React.createElement(Component, {
+      ...props as any,
+      ref: ref as any
+    });
   });
 }
 
@@ -104,7 +107,7 @@ export function debounce<T extends (...args: any[]) => any>(
   func: T,
   wait: number
 ): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout;
+  let timeout: ReturnType<typeof setTimeout>;
   return (...args: Parameters<T>) => {
     clearTimeout(timeout);
     timeout = setTimeout(() => func(...args), wait);
@@ -271,7 +274,7 @@ export const NetworkOptimizer = {
   ) {
     let pendingIds: string[] = [];
     let pendingPromises: { [id: string]: { resolve: (value: T) => void; reject: (error: any) => void } } = {};
-    let timeoutId: NodeJS.Timeout | null = null;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
     const processBatch = async () => {
       if (pendingIds.length === 0) return;
@@ -337,7 +340,9 @@ export const NetworkOptimizer = {
       set(key: string, value: T): void {
         if (cache.size >= maxSize) {
           const firstKey = cache.keys().next().value;
-          cache.delete(firstKey);
+          if (firstKey) {
+            cache.delete(firstKey);
+          }
         }
 
         cache.set(key, {
@@ -370,10 +375,16 @@ export const PerformanceHealthCheck = {
     let score = 100;
 
     // Check memory usage
-    if (MemoryManager.isMemoryCritical && MemoryManager.isMemoryCritical()) {
-      issues.push('High memory usage detected');
-      recommendations.push('Clear cache and optimize data structures');
-      score -= 20;
+    try {
+      const { memoryProfiler } = require('./memoryProfiler');
+      const memoryStats = memoryProfiler.getCurrentStats();
+      if (memoryStats.heap.used / memoryStats.heap.limit > 0.8) {
+        issues.push('High memory usage detected');
+        recommendations.push('Clear cache and optimize data structures');
+        score -= 20;
+      }
+    } catch {
+      // Memory profiler not available
     }
 
     // Check performance metrics

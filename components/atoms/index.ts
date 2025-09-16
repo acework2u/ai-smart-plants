@@ -12,4 +12,4 @@ export type { ButtonProps } from './Button';
 export type { CardProps } from './Card';
 export type { ChipProps } from './Chip';
 export type { SectionProps } from './Section';
-export type { ToastType, ToastConfig } from './Toast';
+// ToastType and ToastConfig are exported by providers to avoid duplication

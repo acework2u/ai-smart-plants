@@ -404,7 +404,10 @@ export function withMemoryTracking<T extends object>(
       };
     }, []);
 
-    return React.createElement(Component, { ...props, ref });
+    return React.createElement(Component, {
+      ...props as any,
+      ref: ref as any
+    });
   });
 }
 

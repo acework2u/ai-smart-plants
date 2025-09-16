@@ -1,6 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Modal, Animated } from 'react-native';
-import { Text } from '../ui/text';
+import { View, StyleSheet, Modal, Animated, Text } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
 
 interface LoadingOverlayProps {

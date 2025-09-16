@@ -65,9 +65,9 @@ export default function GardenScreen() {
     <View style={styles.emptyContainer}>
       <View style={styles.emptyState}>
         <Leaf size={64} color={colors.gray[400]} />
-        <Text style={styles.emptyTitle}>&quot;เริ่มต้นสร้างสวน&apos;</Text>
+        <Text style={styles.emptyTitle}>"1D!H!5ID!IC*'</Text>
         <Text style={styles.emptySubtitle}>
-          เพิ่มต้นไม้แรกของคุณเพื่อเริ่มต้นการดูแล
+          @#4H!II'"2#*AID!IA#-8
         </Text>
         <Button
           title="@4H!ID!I"
@@ -113,7 +113,7 @@ export default function GardenScreen() {
               <View style={styles.noResults}>
                 <Search size={32} color={colors.gray[400]} />
                 <Text style={styles.noResultsText}>
-                  ไม่พบผลการค้นหา &quot;{searchQuery}&quot;
+                  D!HID!I5H#1 "{searchQuery}"
                 </Text>
               </View>
             ) : null

@@ -56,7 +56,7 @@ type AnalyticsTab = 'overview' | 'health' | 'activities' | 'trends';
 export default function AnalyticsScreen() {
   const haptic = useHaptic();
   const { plants } = useGardenStore();
-  const { getActivitiesByPlant } = useActivityStore();
+  const { getActivities } = useActivityStore();
   const {
     getHealthTrends,
     getActivityStats,
@@ -85,7 +85,7 @@ export default function AnalyticsScreen() {
   const handleExportData = async () => {
     await haptic.buttonPress();
     // TODO: Implement export functionality
-    router.push('/export');
+    console.log('Export functionality not yet implemented');
   };
 
   // Generate mock data for charts
@@ -131,36 +131,16 @@ export default function AnalyticsScreen() {
 
   const generateCareConsistencyData = () => {
     return {
-      data: [
-        {
-          name: 'รดน้ำ',
-          population: 0.95,
-          color: colors.primary,
-          legendFontColor: colors.gray700,
-          legendFontSize: 12,
-        },
-        {
-          name: 'ใส่ปุ๋ย',
-          population: 0.78,
-          color: '#f59e0b',
-          legendFontColor: colors.gray700,
-          legendFontSize: 12,
-        },
-        {
-          name: 'ตรวจใบ',
-          population: 0.85,
-          color: '#8b5cf6',
-          legendFontColor: colors.gray700,
-          legendFontSize: 12,
-        },
-      ],
+      labels: ['รดน้ำ', 'ใส่ปุ๋ย', 'ตรวจใบ'],
+      data: [0.95, 0.78, 0.85],
+      colors: [colors.primary, '#f59e0b', '#8b5cf6'],
     };
   };
 
   const renderOverviewTab = () => (
     <View>
       {/* Summary Cards */}
-      <Section title="สรุปภาพรวม" icon={<Activity size={20} color={colors.primary} />}>
+      <Section title="สรุปภาพรวม">
         <View style={styles.summaryGrid}>
           <View style={styles.summaryCard}>
             <Text style={styles.summaryNumber}>
@@ -188,7 +168,6 @@ export default function AnalyticsScreen() {
       {/* Health Trend Chart */}
       <Section
         title="แนวโน้มสุขภาพ"
-        icon={<TrendingUp size={20} color={colors.primary} />}
       >
         <LineChart
           data={generateHealthTrendData()}
@@ -203,7 +182,6 @@ export default function AnalyticsScreen() {
       {/* Activity Distribution */}
       <Section
         title="การกระจายกิจกรรม"
-        icon={<Leaf size={20} color={colors.primary} />}
       >
         <BarChart
           data={generateActivityData()}
@@ -212,6 +190,8 @@ export default function AnalyticsScreen() {
           chartConfig={chartConfig}
           style={styles.chart}
           showValuesOnTopOfBars
+          yAxisLabel=""
+          yAxisSuffix=""
         />
       </Section>
     </View>
@@ -219,7 +199,7 @@ export default function AnalyticsScreen() {
 
   const renderHealthTab = () => (
     <View>
-      <Section title="สุขภาพต้นไม้" icon={<Activity size={20} color={colors.primary} />}>
+      <Section title="สุขภาพต้นไม้">
         <LineChart
           data={generateHealthTrendData()}
           width={screenWidth - spacing(8)}
@@ -250,7 +230,6 @@ export default function AnalyticsScreen() {
       {/* Watering Frequency */}
       <Section
         title="ความถี่การรดน้ำ"
-        icon={<Droplet size={20} color={colors.primary} />}
       >
         <BarChart
           data={generateWateringFrequencyData()}
@@ -258,13 +237,14 @@ export default function AnalyticsScreen() {
           height={220}
           chartConfig={chartConfig}
           style={styles.chart}
+          yAxisLabel=""
+          yAxisSuffix=""
         />
       </Section>
 
       {/* Care Consistency */}
       <Section
         title="ความสม่ำเสมอในการดูแล"
-        icon={<Calendar size={20} color={colors.primary} />}
       >
         <ProgressChart
           data={generateCareConsistencyData()}
@@ -304,7 +284,7 @@ export default function AnalyticsScreen() {
 
   const renderTrendsTab = () => (
     <View>
-      <Section title="แนวโน้มและพยากรณ์" icon={<TrendingUp size={20} color={colors.primary} />}>
+      <Section title="แนวโน้มและพยากรณ์">
         <View style={styles.trendsList}>
           <View style={styles.trendItem}>
             <View style={styles.trendIcon}>
@@ -349,7 +329,7 @@ export default function AnalyticsScreen() {
             <View style={styles.trendContent}>
               <Text style={styles.trendTitle}>เป้าหมายความสม่ำเสมอ</Text>
               <Text style={styles.trendDescription}>
-                อีก 3% คุณจะได้รับ Badge "ผู้ดูแลมืออาชีพ"
+                อีก 3% คุณจะได้รับ Badge &quot;ผู้ดูแลมืออาชีพ&quot;
               </Text>
             </View>
           </View>
@@ -455,7 +435,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing(4),
     paddingVertical: spacing(3),
     borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
+    borderBottomColor: colors.gray[200],
   },
   plantFilter: {
     marginBottom: spacing(3),
@@ -473,7 +453,7 @@ const styles = StyleSheet.create({
   },
   tabContainer: {
     borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
+    borderBottomColor: colors.gray[200],
   },
   tab: {
     paddingHorizontal: spacing(4),
@@ -491,8 +471,8 @@ const styles = StyleSheet.create({
   },
   tabLabel: {
     fontSize: 12,
-    color: colors.gray600,
-    fontFamily: typography.fontFamily,
+    color: colors.gray[600],
+    fontFamily: typography.fontFamily.regular,
     fontWeight: '500' as any,
   },
   activeTabLabel: {
@@ -524,31 +504,31 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold' as any,
     color: colors.primary,
-    fontFamily: typography.fontFamily,
+    fontFamily: typography.fontFamily.regular,
   },
   summaryLabel: {
     fontSize: 14,
-    color: colors.gray700,
-    fontFamily: typography.fontFamily,
+    color: colors.gray[700],
+    fontFamily: typography.fontFamily.regular,
     marginTop: spacing(1),
   },
   healthInsights: {
     marginTop: spacing(4),
     padding: spacing(4),
-    backgroundColor: colors.gray50,
+    backgroundColor: colors.gray[50],
     borderRadius: 12,
   },
   insightTitle: {
     fontSize: 16,
     fontWeight: '600' as any,
-    color: colors.gray900,
-    fontFamily: typography.fontFamily,
+    color: colors.gray[900],
+    fontFamily: typography.fontFamily.regular,
     marginBottom: spacing(2),
   },
   insightText: {
     fontSize: 14,
-    color: colors.gray700,
-    fontFamily: typography.fontFamily,
+    color: colors.gray[700],
+    fontFamily: typography.fontFamily.regular,
     lineHeight: 20,
     marginBottom: spacing(1),
   },
@@ -561,18 +541,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: spacing(3),
     borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
+    borderBottomColor: colors.gray[200],
   },
   statLabel: {
     fontSize: 14,
-    color: colors.gray700,
-    fontFamily: typography.fontFamily,
+    color: colors.gray[700],
+    fontFamily: typography.fontFamily.regular,
   },
   statValue: {
     fontSize: 14,
     fontWeight: '600' as any,
-    color: colors.gray900,
-    fontFamily: typography.fontFamily,
+    color: colors.gray[900],
+    fontFamily: typography.fontFamily.regular,
   },
   trendsList: {
     marginTop: spacing(2),
@@ -580,7 +560,7 @@ const styles = StyleSheet.create({
   trendItem: {
     flexDirection: 'row',
     padding: spacing(4),
-    backgroundColor: colors.gray50,
+    backgroundColor: colors.gray[50],
     borderRadius: 12,
     marginBottom: spacing(3),
   },
@@ -602,14 +582,14 @@ const styles = StyleSheet.create({
   trendTitle: {
     fontSize: 16,
     fontWeight: '600' as any,
-    color: colors.gray900,
-    fontFamily: typography.fontFamily,
+    color: colors.gray[900],
+    fontFamily: typography.fontFamily.regular,
     marginBottom: spacing(1),
   },
   trendDescription: {
     fontSize: 14,
-    color: colors.gray600,
-    fontFamily: typography.fontFamily,
+    color: colors.gray[600],
+    fontFamily: typography.fontFamily.regular,
     lineHeight: 20,
   },
   spacer: {

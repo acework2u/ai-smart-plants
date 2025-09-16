@@ -56,7 +56,7 @@ export interface CareInsight {
  */
 export const calculateWateringFrequency = (activities: ActivityEntry[]): number => {
   const wateringActivities = activities
-    .filter(a => a.kind === 'water')
+    .filter(a => a.kind === 'รดน้ำ')
     .map(a => new Date(a.dateISO))
     .sort((a, b) => b.getTime() - a.getTime());
 
@@ -76,7 +76,7 @@ export const calculateWateringFrequency = (activities: ActivityEntry[]): number 
  */
 export const calculateConsistency = (activities: ActivityEntry[]): number => {
   const wateringActivities = activities
-    .filter(a => a.kind === 'water')
+    .filter(a => a.kind === 'รดน้ำ')
     .map(a => new Date(a.dateISO))
     .sort((a, b) => b.getTime() - a.getTime());
 
@@ -102,11 +102,11 @@ export const calculateConsistency = (activities: ActivityEntry[]): number => {
  */
 export const calculateAverageVolume = (activities: ActivityEntry[]): number => {
   const wateringWithVolume = activities
-    .filter(a => a.kind === 'water' && a.quantity && a.quantity > 0);
+    .filter(a => a.kind === 'รดน้ำ' && a.quantity && parseFloat(a.quantity) > 0);
 
   if (wateringWithVolume.length === 0) return 0;
 
-  const total = wateringWithVolume.reduce((sum, a) => sum + (a.quantity || 0), 0);
+  const total = wateringWithVolume.reduce((sum, a) => sum + (parseFloat(a.quantity || '0')), 0);
   return total / wateringWithVolume.length;
 };
 
@@ -135,18 +135,18 @@ export const calculateFertilizerUsage = (
 ): FertilizerUsage[] => {
   return plants.map(plant => {
     const activities = allActivities[plant.id] || [];
-    const fertilizerActivities = activities.filter(a => a.kind === 'fertilizer');
+    const fertilizerActivities = activities.filter(a => a.kind === 'ใส่ปุ๋ย');
 
-    const totalAmount = fertilizerActivities.reduce((sum, a) => sum + (a.quantity || 0), 0);
+    const totalAmount = fertilizerActivities.reduce((sum, a) => sum + (parseFloat(a.quantity || '0')), 0);
     const frequency = calculateWateringFrequency(fertilizerActivities); // Reuse frequency calculation
 
     // Calculate average NPK ratio
     const npkActivities = fertilizerActivities.filter(a => a.npk);
     const avgNPK = npkActivities.length > 0
       ? npkActivities.reduce((acc, a) => ({
-          n: acc.n + (a.npk?.n || 0),
-          p: acc.p + (a.npk?.p || 0),
-          k: acc.k + (a.npk?.k || 0)
+          n: acc.n + (parseFloat(a.npk?.n || '0')),
+          p: acc.p + (parseFloat(a.npk?.p || '0')),
+          k: acc.k + (parseFloat(a.npk?.k || '0'))
         }), { n: 0, p: 0, k: 0 })
       : { n: 0, p: 0, k: 0 };
 
@@ -247,8 +247,8 @@ export const generateHealthDataPoints = (
     });
 
     // Calculate health score for this week
-    const wateringCount = weekActivities.filter(a => a.kind === 'water').length;
-    const otherActivities = weekActivities.filter(a => a.kind !== 'water').length;
+    const wateringCount = weekActivities.filter(a => a.kind === 'รดน้ำ').length;
+    const otherActivities = weekActivities.filter(a => a.kind !== 'รดน้ำ').length;
 
     let weekScore = 50;
     weekScore += wateringCount * 10; // Each watering adds points
@@ -307,7 +307,7 @@ export const generateCareInsights = (
   // Check for plants that haven't been watered recently
   plants.forEach(plant => {
     const activities = allActivities[plant.id] || [];
-    const lastWatering = activities.find(a => a.kind === 'water');
+    const lastWatering = activities.find(a => a.kind === 'รดน้ำ');
 
     if (!lastWatering) {
       insights.push({
@@ -403,7 +403,7 @@ export const formatDataForCSV = (
         activity.quantity || '',
         activity.unit || '',
         npkString,
-        activity.notes || ''
+        activity.note || ''
       ];
       rows.push(row.map(cell => `"${cell}"`).join(','));
     });
@@ -442,7 +442,7 @@ export const calculateSuccessMetrics = (
   // Calculate watering success (plants watered in last 7 days)
   const plantsWateredRecently = plants.filter(plant => {
     const activities = allActivities[plant.id] || [];
-    const lastWatering = activities.find(a => a.kind === 'water');
+    const lastWatering = activities.find(a => a.kind === 'รดน้ำ');
     if (!lastWatering) return false;
 
     const daysSince = (Date.now() - new Date(lastWatering.dateISO).getTime()) / (1000 * 60 * 60 * 24);
@@ -454,7 +454,7 @@ export const calculateSuccessMetrics = (
   // Calculate fertilizing success (plants fertilized in last 30 days)
   const plantsFertilizedRecently = plants.filter(plant => {
     const activities = allActivities[plant.id] || [];
-    const lastFertilizing = activities.find(a => a.kind === 'fertilizer');
+    const lastFertilizing = activities.find(a => a.kind === 'ใส่ปุ๋ย');
     if (!lastFertilizing) return false;
 
     const daysSince = (Date.now() - new Date(lastFertilizing.dateISO).getTime()) / (1000 * 60 * 60 * 24);
