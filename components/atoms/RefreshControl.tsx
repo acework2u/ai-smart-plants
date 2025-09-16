@@ -53,3 +53,5 @@ export const useRefresh = (refreshFunction: () => Promise<void>) => {
 
   return { refreshing, onRefresh };
 };
+
+export default RefreshControl;
