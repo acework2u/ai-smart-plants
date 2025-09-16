@@ -26,6 +26,7 @@ interface OnboardingCarouselProps {
   onSlideChange?: (index: number) => void;
   autoPlay?: boolean;
   autoPlayDelay?: number;
+  enableGesture?: boolean;
 }
 
 export default function OnboardingCarousel({
@@ -33,6 +34,7 @@ export default function OnboardingCarousel({
   onSlideChange,
   autoPlay = false,
   autoPlayDelay = 5000,
+  enableGesture = true,
 }: OnboardingCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const scrollX = useSharedValue(0);
@@ -56,14 +58,13 @@ export default function OnboardingCarousel({
   }, [autoPlay, autoPlayDelay, currentIndex, slides.length]);
 
   const goToSlide = (index: number) => {
-    'worklet';
     const clampedIndex = Math.max(0, Math.min(slides.length - 1, index));
     scrollX.value = withSpring(clampedIndex * screenWidth, {
       damping: 20,
       stiffness: 200,
     });
-    // Schedule index update on JS with explicit arrow to ensure function
-    runOnJS(() => updateCurrentIndex(clampedIndex))();
+    // Update index directly in JS
+    updateCurrentIndex(clampedIndex);
   };
 
   const updateCurrentIndex = (index: number) => {
@@ -90,11 +91,18 @@ export default function OnboardingCarousel({
   };
 
   const panGesture = Gesture.Pan()
+    // reduce accidental activation + avoid edge-back conflicts
+    .activeOffsetX([-10, 10])
+    .activeOffsetY([-10, 10])
+    .hitSlop({ left: 24, right: 24 })
     .onStart(() => {
       startX.value = scrollX.value;
     })
     .onUpdate((event) => {
-      scrollX.value = startX.value - event.translationX;
+      // clamp within [0, max]
+      const max = (slides.length - 1) * screenWidth;
+      const next = startX.value - event.translationX;
+      scrollX.value = next < 0 ? 0 : next > max ? max : next;
     })
     .onEnd((event) => {
       // Wrap to avoid passing potentially undefined reference
@@ -140,7 +148,23 @@ export default function OnboardingCarousel({
     >
       <Animated.View style={[styles.background, backgroundAnimatedStyle]} />
 
-      <GestureDetector gesture={panGesture}>
+      {enableGesture ? (
+        <GestureDetector gesture={panGesture}>
+          <Animated.View style={styles.carouselContainer}>
+            <Animated.View style={[styles.slidesContainer, animatedStyle]}>
+              {slides.map((slide, index) => (
+                <OnboardingSlide
+                  key={slide.id}
+                  slide={slide}
+                  isActive={index === currentIndex}
+                  slideIndex={index}
+                  scrollX={scrollX}
+                />
+              ))}
+            </Animated.View>
+          </Animated.View>
+        </GestureDetector>
+      ) : (
         <Animated.View style={styles.carouselContainer}>
           <Animated.View style={[styles.slidesContainer, animatedStyle]}>
             {slides.map((slide, index) => (
@@ -154,7 +178,7 @@ export default function OnboardingCarousel({
             ))}
           </Animated.View>
         </Animated.View>
-      </GestureDetector>
+      )}
 
       {/* Progress Dots */}
       <View style={styles.dotsContainer}>
