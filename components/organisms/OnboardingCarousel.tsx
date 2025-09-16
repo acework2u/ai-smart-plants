@@ -63,7 +63,6 @@ export default function OnboardingCarousel({
       stiffness: 200,
     });
     runOnJS(updateCurrentIndex)(clampedIndex);
-    runOnJS(triggerHapticFeedback)();
   };
 
   const updateCurrentIndex = (index: number) => {
@@ -74,9 +73,7 @@ export default function OnboardingCarousel({
     if (autoPlayRef.current) {
       clearInterval(autoPlayRef.current);
     }
-  };
-
-  const triggerHapticFeedback = () => {
+    // Trigger haptics in JS context to avoid runOnJS undefined issues
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
