@@ -5,20 +5,25 @@ import {
   ScrollView,
   StyleSheet,
   SafeAreaView,
+  TextInput,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Leaf, Plus, Search } from 'lucide-react-native';
-import { Button, Section } from '../../components/atoms';
+import { Button, Chip, Section } from '../../components/atoms';
 import { OptimizedFlatList } from '../../components/atoms/OptimizedFlatList';
 import { OptimizedPlantCard } from '../../components/atoms/OptimizedComponents';
 import { useGardenStore, useFilteredPlants } from '../../stores/garden';
 import { colors, getSpacing, typography, radius } from '../../core/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 import { MemoryManager } from '../../utils/performance';
 
 export default function GardenScreen() {
   const plants = useFilteredPlants(); // Use optimized selector
-  const [searchQuery, setSearchQuery] = React.useState('');
+  const [searchQuery, setSearchQueryLocal] = React.useState('');
   const [refreshing, setRefreshing] = React.useState(false);
+  const { theme } = useTheme();
+  const setSearchQuery = useGardenStore((s) => s.setSearchQuery);
+  const setFilter = useGardenStore((s) => s.setFilter);
 
   // Memoize plant press handler
   const handlePlantPress = useCallback((plantId: string) => {
@@ -87,6 +92,28 @@ export default function GardenScreen() {
         />
       </View>
 
+      {/* Search & Filters */}
+      <View style={styles.searchBar}>
+        <Search size={18} color={theme.colors.text.tertiary} />
+        <TextInput
+          style={styles.searchInput}
+          value={searchQuery}
+          onChangeText={(t) => {
+            setSearchQueryLocal(t);
+            setSearchQuery(t);
+          }}
+          placeholder="ค้นหาต้นไม้..."
+          placeholderTextColor={theme.colors.text.tertiary}
+          returnKeyType="search"
+        />
+      </View>
+      <View style={styles.filterRow}>
+        <Chip label="ทั้งหมด" variant="filter" onPress={() => setFilter('all')} />
+        <Chip label="แข็งแรง" variant="filter" status="Healthy" onPress={() => setFilter('Healthy')} />
+        <Chip label="เตือน" variant="filter" status="Warning" onPress={() => setFilter('Warning')} />
+        <Chip label="วิกฤต" variant="filter" status="Critical" onPress={() => setFilter('Critical')} />
+      </View>
+
       {plants.length === 0 ? (
         renderEmptyState()
       ) : (
@@ -119,6 +146,41 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderBottomWidth: 1,
     borderBottomColor: colors.border.light,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: getSpacing(2),
+  },
+  headerTitle: {
+    fontSize: typography.fontSize.xl,
+    fontFamily: typography.fontFamily.semibold,
+    color: colors.text.primary,
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.background.tertiary,
+    borderRadius: radius.lg,
+    paddingHorizontal: getSpacing(3),
+    paddingVertical: getSpacing(2),
+    margin: getSpacing(4),
+    marginTop: getSpacing(3),
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 0,
+    marginLeft: 8,
+    color: colors.text.primary,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: getSpacing(2),
+    paddingHorizontal: getSpacing(4),
+    paddingBottom: getSpacing(2),
   },
   headerSection: {
     marginBottom: getSpacing(2),

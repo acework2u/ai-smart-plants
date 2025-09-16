@@ -1,6 +1,7 @@
 // Central export for all core modules
 import { Platform, Dimensions } from 'react-native';
 import { generateId as genId } from '../utils/ids';
+import hapticsDefault from './haptics';
 export * from './theme';
 export * from './haptics';
 
@@ -276,7 +277,7 @@ export const initializeCore = () => {
   }
 
   // Initialize haptic service with default config
-  hapticService.configure({
+  hapticsDefault.configure({
     enabled: APP_CONFIG.features.hapticFeedback,
     intensity: 'medium',
   });
@@ -284,6 +285,4 @@ export const initializeCore = () => {
   console.log(`[Core] AI Smart Plants v${APP_CONFIG.version} initialized`);
 };
 
-// Add required imports that were missing
-import { Platform, Dimensions } from 'react-native';
-import { hapticService } from './haptics';
+// (imports consolidated at top)

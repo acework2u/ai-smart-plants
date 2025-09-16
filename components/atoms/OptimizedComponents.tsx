@@ -13,6 +13,7 @@ import { Leaf } from 'lucide-react-native';
 import { useTheme } from '../../contexts/ThemeContext';
 import { ImageOptimizer, MemoryManager } from '../../utils/performance';
 import { Card, Chip } from './index';
+import { radius } from '../../core/theme';
 
 // Optimized Plant Card with memoization and image caching
 interface OptimizedPlantCardProps {
@@ -87,7 +88,7 @@ export const OptimizedPlantCard = memo<OptimizedPlantCardProps>(({
       imageContainer: {
         width: imageSize,
         height: imageSize,
-        borderRadius: theme.radius.lg,
+        borderRadius: radius.lg,
         backgroundColor: theme.colors.primarySoft,
         alignItems: 'center',
         justifyContent: 'center',
@@ -97,7 +98,7 @@ export const OptimizedPlantCard = memo<OptimizedPlantCardProps>(({
       image: {
         width: imageSize,
         height: imageSize,
-        borderRadius: theme.radius.lg,
+        borderRadius: radius.lg,
       },
       content: {
         flex: 1,
