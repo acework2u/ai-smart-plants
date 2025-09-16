@@ -12,7 +12,7 @@ import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { Leaf, Sparkles } from 'lucide-react-native';
 import { Button, Card, Section, Chip } from '../components/atoms';
-import { StaggerContainer, ParallaxScrollView, BounceButton, LoadingTransition, StateAnimation } from '../components/atoms/Animations';
+import { StaggerContainer, ParallaxScrollView, BounceButton, StateAnimation } from '../components/atoms/Animations';
 import { GardenGridSkeleton, TipsListSkeleton, Skeleton } from '../components/atoms/Skeleton';
 import RefreshControl from '../components/atoms/RefreshControl';
 import { useGardenStore } from '../stores/garden';
@@ -24,7 +24,7 @@ export default function HomeScreen() {
   const { plants } = useGardenStore();
   const { theme } = useTheme();
   const [refreshing, setRefreshing] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [tipsLoading, setTipsLoading] = useState(true);
   const [plantsLoading, setPlantsLoading] = useState(true);
 
@@ -193,75 +193,17 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <LoadingTransition
-        isLoading={loading}
-        duration={400}
-        loadingComponent={
-          <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
-            {/* Header Skeleton */}
-            <View style={styles.header}>
-              <Skeleton width="60%" height={36} borderRadius={8} style={{ marginBottom: 8 }} />
-              <Skeleton width="40%" height={20} borderRadius={6} />
-            </View>
-
-            {/* Scanner Card Skeleton */}
-            <Card style={styles.scannerCard} variant="elevated">
-              <View style={styles.scannerContent}>
-                <Skeleton width={64} height={64} borderRadius={32} style={{ marginBottom: 16 }} />
-                <Skeleton width="70%" height={24} borderRadius={6} style={{ marginBottom: 8 }} />
-                <Skeleton width="90%" height={16} borderRadius={4} style={{ marginBottom: 24 }} />
-                <View style={{ flexDirection: 'row', gap: 12 }}>
-                  <Skeleton width={120} height={44} borderRadius={8} />
-                  <Skeleton width={120} height={44} borderRadius={8} />
-                </View>
-              </View>
-            </Card>
-
-            {/* Tips Section Skeleton */}
-            <View style={styles.section}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                <View>
-                  <Skeleton width={120} height={20} borderRadius={4} style={{ marginBottom: 4 }} />
-                  <Skeleton width={80} height={14} borderRadius={4} />
-                </View>
-                <Skeleton width={60} height={16} borderRadius={4} />
-              </View>
-              <TipsListSkeleton count={3} />
-            </View>
-
-            {/* Recent Plants Skeleton */}
-            <View style={styles.section}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                <View>
-                  <Skeleton width={100} height={20} borderRadius={4} style={{ marginBottom: 4 }} />
-                  <Skeleton width={60} height={14} borderRadius={4} />
-                </View>
-                <Skeleton width={50} height={16} borderRadius={4} />
-              </View>
-              <View style={styles.plantsGrid}>
-                {Array.from({ length: 4 }).map((_, index) => (
-                  <View key={index} style={styles.plantCard}>
-                    <Skeleton width={48} height={48} borderRadius={24} style={{ marginBottom: 8 }} />
-                    <Skeleton width="80%" height={14} borderRadius={4} style={{ marginBottom: 8 }} />
-                    <Skeleton width={60} height={24} borderRadius={12} />
-                  </View>
-                ))}
-              </View>
-            </View>
-          </ScrollView>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+          />
         }
       >
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.content}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-            />
-          }
-        >
           <StaggerContainer delay={200} staggerDelay={150}>
           {/* Header */}
           <View style={styles.header}>
@@ -403,7 +345,6 @@ export default function HomeScreen() {
             <View style={styles.bottomSpacing} />
           </StaggerContainer>
         </ScrollView>
-      </LoadingTransition>
     </SafeAreaView>
   );
 }
