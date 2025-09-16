@@ -1,65 +1,55 @@
-import React from 'react';
+import React, { useMemo, useCallback } from 'react';
 import {
   View,
   Text,
   ScrollView,
-  FlatList,
   StyleSheet,
   SafeAreaView,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Leaf, Plus, Search } from 'lucide-react-native';
-import { Button, Card, Chip, Section } from '../../components/atoms';
-import { useGardenStore } from '../../stores/garden';
+import { Button, Section } from '../../components/atoms';
+import { OptimizedFlatList } from '../../components/atoms/OptimizedFlatList';
+import { OptimizedPlantCard } from '../../components/atoms/OptimizedComponents';
+import { useGardenStore, useFilteredPlants } from '../../stores/garden';
 import { colors, getSpacing, typography, radius } from '../../core/theme';
+import { MemoryManager } from '../../utils/performance';
 
 export default function GardenScreen() {
-  const { plants, searchPlants } = useGardenStore();
+  const plants = useFilteredPlants(); // Use optimized selector
   const [searchQuery, setSearchQuery] = React.useState('');
+  const [refreshing, setRefreshing] = React.useState(false);
 
-  const filteredPlants = React.useMemo(() => {
-    return searchQuery ? searchPlants(searchQuery) : plants;
-  }, [plants, searchQuery, searchPlants]);
-
-  const handlePlantPress = (plantId: string) => {
+  // Memoize plant press handler
+  const handlePlantPress = useCallback((plantId: string) => {
     router.push(`/plant/${plantId}`);
-  };
+  }, []);
 
-  const handleAddPlant = () => {
+  // Memoize add plant handler
+  const handleAddPlant = useCallback(() => {
     router.push('/');
-  };
+  }, []);
 
-  const renderPlantCard = ({ item: plant }: { item: any }) => (
-    <Card
+  // Memoize refresh handler
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      // Simulate refresh - in real app, this would sync with backend
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    } finally {
+      setRefreshing(false);
+    }
+  }, []);
+
+  // Memoized render function for optimized performance
+  const renderPlantCard = useCallback(({ item: plant }: { item: any }) => (
+    <OptimizedPlantCard
+      plant={plant}
+      onPress={handlePlantPress}
+      size="medium"
       style={styles.plantCard}
-      onPress={() => handlePlantPress(plant.id)}
-      variant="default"
-    >
-      <View style={styles.plantImagePlaceholder}>
-        <Leaf size={32} color={colors.primary} />
-      </View>
-
-      <View style={styles.plantInfo}>
-        <Text style={styles.plantName} numberOfLines={1}>
-          {plant.name}
-        </Text>
-        {plant.scientificName && (
-          <Text style={styles.scientificName} numberOfLines={1}>
-            {plant.scientificName}
-          </Text>
-        )}
-
-        <View style={styles.plantMeta}>
-          <Chip
-            label={plant.status}
-            status={plant.status}
-            variant="status"
-            size="sm"
-          />
-        </View>
-      </View>
-    </Card>
-  );
+    />
+  ), [handlePlantPress]);
 
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
@@ -100,24 +90,18 @@ export default function GardenScreen() {
       {plants.length === 0 ? (
         renderEmptyState()
       ) : (
-        <FlatList
-          data={filteredPlants}
+        <OptimizedFlatList
+          data={plants}
           renderItem={renderPlantCard}
-          keyExtractor={(item) => item.id}
           numColumns={2}
+          itemHeight={180}
+          enableVirtualization={true}
           contentContainerStyle={styles.listContent}
           columnWrapperStyle={styles.row}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            searchQuery ? (
-              <View style={styles.noResults}>
-                <Search size={32} color={colors.gray[400]} />
-                <Text style={styles.noResultsText}>
-                  ไม่พบผลการค้นหา &quot;{searchQuery}&quot;
-                </Text>
-              </View>
-            ) : null
-          }
+          onRefresh={handleRefresh}
+          refreshing={refreshing}
+          emptyTitle="ไม่พบต้นไม้"
+          emptySubtitle="เริ่มต้นด้วยการเพิ่มต้นไม้แรกของคุณ"
         />
       )}
     </SafeAreaView>
@@ -149,43 +133,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
 
-  // Plant Cards
+  // Plant Cards (simplified since we're using OptimizedPlantCard)
   plantCard: {
-    width: '47%', // 2 columns with getSpacing
-    aspectRatio: 0.8,
+    width: '47%', // 2 columns with spacing
     marginBottom: getSpacing(4),
-    padding: getSpacing(3),
-  },
-  plantImagePlaceholder: {
-    width: '100%',
-    height: 80,
-    borderRadius: radius.lg,
-    backgroundColor: colors.primarySoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: getSpacing(3),
-  },
-  plantInfo: {
-    flex: 1,
-  },
-  plantName: {
-    fontSize: typography.fontSize.base,
-    fontFamily: typography.fontFamily.semibold,
-    fontWeight: '600',
-    color: colors.text.primary,
-    marginBottom: getSpacing(1),
-  },
-  scientificName: {
-    fontSize: typography.fontSize.sm,
-    fontFamily: typography.fontFamily.regular,
-    color: colors.text.secondary,
-    fontStyle: 'italic',
-    marginBottom: getSpacing(2),
-  },
-  plantMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
   },
 
   // Empty State

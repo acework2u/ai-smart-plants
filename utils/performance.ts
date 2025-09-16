@@ -138,8 +138,14 @@ export function runAfterInteractions<T>(callback: () => T): Promise<T> {
   });
 }
 
-// Image optimization utilities
+// Enhanced Image optimization utilities with caching
 export const ImageOptimizer = {
+  // In-memory cache for optimized images
+  _imageCache: new Map<string, { uri: string; timestamp: number; size: number }>(),
+  _cacheSize: 0,
+  _maxCacheSize: 50 * 1024 * 1024, // 50MB cache limit
+  _maxCacheAge: 24 * 60 * 60 * 1000, // 24 hours
+
   // Get optimized image URL for different screen densities
   getOptimizedImageUrl(
     baseUrl: string,
@@ -182,17 +188,149 @@ export const ImageOptimizer = {
       height: Math.round(newHeight),
     };
   },
+
+  // Cache image with size tracking
+  cacheImage(key: string, uri: string, estimatedSize: number = 0): void {
+    // Clean expired cache entries
+    this.cleanExpiredCache();
+
+    // Remove old entry if exists
+    this.removeFromCache(key);
+
+    // Check if we need to free up space
+    while (this._cacheSize + estimatedSize > this._maxCacheSize && this._imageCache.size > 0) {
+      this.removeOldestCacheEntry();
+    }
+
+    this._imageCache.set(key, {
+      uri,
+      timestamp: Date.now(),
+      size: estimatedSize,
+    });
+    this._cacheSize += estimatedSize;
+  },
+
+  // Get cached image
+  getCachedImage(key: string): string | null {
+    const cached = this._imageCache.get(key);
+    if (!cached) return null;
+
+    // Check if expired
+    if (Date.now() - cached.timestamp > this._maxCacheAge) {
+      this.removeFromCache(key);
+      return null;
+    }
+
+    return cached.uri;
+  },
+
+  // Remove specific cache entry
+  removeFromCache(key: string): void {
+    const cached = this._imageCache.get(key);
+    if (cached) {
+      this._cacheSize -= cached.size;
+      this._imageCache.delete(key);
+    }
+  },
+
+  // Remove oldest cache entry
+  removeOldestCacheEntry(): void {
+    let oldestKey: string | null = null;
+    let oldestTime = Date.now();
+
+    for (const [key, value] of this._imageCache.entries()) {
+      if (value.timestamp < oldestTime) {
+        oldestTime = value.timestamp;
+        oldestKey = key;
+      }
+    }
+
+    if (oldestKey) {
+      this.removeFromCache(oldestKey);
+    }
+  },
+
+  // Clean expired cache entries
+  cleanExpiredCache(): void {
+    const now = Date.now();
+    const expiredKeys: string[] = [];
+
+    for (const [key, value] of this._imageCache.entries()) {
+      if (now - value.timestamp > this._maxCacheAge) {
+        expiredKeys.push(key);
+      }
+    }
+
+    expiredKeys.forEach(key => this.removeFromCache(key));
+  },
+
+  // Clear all cached images
+  clearCache(): void {
+    this._imageCache.clear();
+    this._cacheSize = 0;
+  },
+
+  // Get cache statistics
+  getCacheStats(): {
+    entries: number;
+    totalSize: number;
+    maxSize: number;
+    utilization: number;
+  } {
+    return {
+      entries: this._imageCache.size,
+      totalSize: this._cacheSize,
+      maxSize: this._maxCacheSize,
+      utilization: (this._cacheSize / this._maxCacheSize) * 100,
+    };
+  },
+
+  // Progressive image loading configuration
+  getProgressiveLoadingConfig(imageSize: 'thumbnail' | 'medium' | 'full') {
+    const configs = {
+      thumbnail: { width: 150, height: 150, quality: 60 },
+      medium: { width: 400, height: 400, quality: 75 },
+      full: { width: 800, height: 800, quality: 85 },
+    };
+
+    return configs[imageSize];
+  },
 };
 
-// Memory management utilities
+// Enhanced Memory management utilities
 export const MemoryManager = {
+  // Track memory-intensive objects
+  _trackedObjects: new WeakSet(),
+  _cleanupCallbacks: new Set<() => void>(),
+  _memoryWarningThreshold: 0.8, // 80% of available memory
+
   // Clean up large objects from memory
   cleanup(objects: any[]): void {
     objects.forEach((obj) => {
       if (obj && typeof obj === 'object') {
+        // Mark for cleanup tracking
+        this._trackedObjects.add(obj);
+
         Object.keys(obj).forEach((key) => {
           delete obj[key];
         });
+      }
+    });
+  },
+
+  // Register cleanup callback
+  registerCleanupCallback(callback: () => void): () => void {
+    this._cleanupCallbacks.add(callback);
+    return () => this._cleanupCallbacks.delete(callback);
+  },
+
+  // Execute all cleanup callbacks
+  executeCleanup(): void {
+    this._cleanupCallbacks.forEach(callback => {
+      try {
+        callback();
+      } catch (error) {
+        console.warn('Memory cleanup callback failed:', error);
       }
     });
   },
@@ -201,28 +339,104 @@ export const MemoryManager = {
   logMemoryUsage(): void {
     if (__DEV__ && (performance as any).memory) {
       const memory = (performance as any).memory;
+      const usage = {
+        used: Math.round(memory.usedJSHeapSize / 1024 / 1024),
+        total: Math.round(memory.totalJSHeapSize / 1024 / 1024),
+        limit: Math.round(memory.jsHeapSizeLimit / 1024 / 1024),
+        utilization: memory.usedJSHeapSize / memory.jsHeapSizeLimit,
+      };
+
       console.log('🧠 Memory Usage:', {
-        used: `${Math.round(memory.usedJSHeapSize / 1024 / 1024)}MB`,
-        total: `${Math.round(memory.totalJSHeapSize / 1024 / 1024)}MB`,
-        limit: `${Math.round(memory.jsHeapSizeLimit / 1024 / 1024)}MB`,
+        used: `${usage.used}MB`,
+        total: `${usage.total}MB`,
+        limit: `${usage.limit}MB`,
+        utilization: `${(usage.utilization * 100).toFixed(1)}%`,
       });
+
+      // Trigger cleanup if memory usage is high
+      if (usage.utilization > this._memoryWarningThreshold) {
+        console.warn('⚠️ High memory usage detected, triggering cleanup');
+        this.executeCleanup();
+        ImageOptimizer.cleanExpiredCache();
+      }
+
+      return usage;
     }
+    return null;
   },
 
-  // Create a memory-efficient list renderer
-  createVirtualizedConfig(itemHeight: number) {
-    return {
-      getItemLayout: (_: any, index: number) => ({
+  // Create a memory-efficient list renderer with dynamic sizing
+  createVirtualizedConfig(itemHeight: number, dynamicHeight: boolean = false) {
+    const config: any = {
+      keyExtractor: (item: any, index: number) => item.id || String(index),
+      removeClippedSubviews: true,
+      maxToRenderPerBatch: BundleAnalyzer.isLowEndDevice() ? 5 : 10,
+      windowSize: BundleAnalyzer.isLowEndDevice() ? 5 : 10,
+      initialNumToRender: BundleAnalyzer.isLowEndDevice() ? 5 : 10,
+      updateCellsBatchingPeriod: 100,
+    };
+
+    // Only add getItemLayout for fixed heights (better performance)
+    if (!dynamicHeight) {
+      config.getItemLayout = (_: any, index: number) => ({
         length: itemHeight,
         offset: itemHeight * index,
         index,
-      }),
-      keyExtractor: (item: any, index: number) => item.id || String(index),
-      removeClippedSubviews: true,
-      maxToRenderPerBatch: 10,
-      windowSize: 10,
-      initialNumToRender: 10,
-      updateCellsBatchingPeriod: 100,
+      });
+    }
+
+    return config;
+  },
+
+  // Create optimized memoization for expensive calculations
+  createMemoizedCalculation<T extends (...args: any[]) => any>(
+    fn: T,
+    maxCacheSize: number = 100
+  ): T {
+    const cache = new Map();
+
+    return ((...args: Parameters<T>): ReturnType<T> => {
+      const key = JSON.stringify(args);
+
+      if (cache.has(key)) {
+        return cache.get(key);
+      }
+
+      const result = fn(...args);
+
+      // Limit cache size
+      if (cache.size >= maxCacheSize) {
+        const firstKey = cache.keys().next().value;
+        cache.delete(firstKey);
+      }
+
+      cache.set(key, result);
+      return result;
+    }) as T;
+  },
+
+  // Monitor component mount/unmount for memory leaks
+  createComponentTracker(componentName: string) {
+    let mountCount = 0;
+    let unmountCount = 0;
+
+    return {
+      onMount: () => {
+        mountCount++;
+        if (__DEV__) {
+          console.log(`📊 ${componentName} mounted (${mountCount} total)`);
+        }
+      },
+      onUnmount: () => {
+        unmountCount++;
+        if (__DEV__) {
+          console.log(`📊 ${componentName} unmounted (${unmountCount} total)`);
+          if (mountCount - unmountCount > 10) {
+            console.warn(`⚠️ Potential memory leak: ${componentName} has ${mountCount - unmountCount} unmounted instances`);
+          }
+        }
+      },
+      getStats: () => ({ mounted: mountCount, unmounted: unmountCount, active: mountCount - unmountCount }),
     };
   },
 };
