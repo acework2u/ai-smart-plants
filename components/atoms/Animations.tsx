@@ -1,7 +1,20 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Animated, PanGestureHandler, State } from 'react-native';
+import { View, Animated, PanGestureHandler, State, Dimensions } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import ReAnimated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+  interpolate,
+  Easing,
+  withSequence,
+  runOnJS,
+  SharedValue,
+} from 'react-native-reanimated';
 import { useTheme } from '../../contexts/ThemeContext';
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // Stagger Animation Container
 interface StaggerContainerProps {
@@ -399,6 +412,277 @@ export const useScaleIn = (duration = 300, delay = 0) => {
   return scaleAnim;
 };
 
+// Enhanced Page Transition Container using react-native-reanimated
+interface PageTransitionProps {
+  children: React.ReactNode;
+  isVisible: boolean;
+  transition?: 'slide' | 'fade' | 'scale' | 'push' | 'modal';
+  duration?: number;
+  direction?: 'left' | 'right' | 'up' | 'down';
+  onTransitionComplete?: () => void;
+}
+
+export const PageTransition: React.FC<PageTransitionProps> = ({
+  children,
+  isVisible,
+  transition = 'slide',
+  duration = 300,
+  direction = 'right',
+  onTransitionComplete,
+}) => {
+  const opacity = useSharedValue(isVisible ? 1 : 0);
+  const translateX = useSharedValue(isVisible ? 0 : SCREEN_WIDTH);
+  const translateY = useSharedValue(isVisible ? 0 : SCREEN_HEIGHT);
+  const scale = useSharedValue(isVisible ? 1 : 0.9);
+
+  useEffect(() => {
+    const config = {
+      duration,
+      easing: Easing.out(Easing.cubic),
+    };
+
+    switch (transition) {
+      case 'fade':
+        opacity.value = withTiming(isVisible ? 1 : 0, config, (finished) => {
+          if (finished) runOnJS(() => onTransitionComplete?.())();
+        });
+        break;
+
+      case 'slide':
+        const slideValue = direction === 'left' ? -SCREEN_WIDTH :
+                          direction === 'right' ? SCREEN_WIDTH : 0;
+        translateX.value = withTiming(isVisible ? 0 : slideValue, config, (finished) => {
+          if (finished) runOnJS(() => onTransitionComplete?.())();
+        });
+        opacity.value = withTiming(isVisible ? 1 : 0, config);
+        break;
+
+      case 'push':
+        const pushValue = direction === 'up' ? -SCREEN_HEIGHT : SCREEN_HEIGHT;
+        translateY.value = withTiming(isVisible ? 0 : pushValue, config, (finished) => {
+          if (finished) runOnJS(() => onTransitionComplete?.())();
+        });
+        opacity.value = withTiming(isVisible ? 1 : 0, config);
+        break;
+
+      case 'scale':
+        scale.value = withSpring(isVisible ? 1 : 0.9, {
+          damping: 20,
+          stiffness: 300,
+        }, (finished) => {
+          if (finished) runOnJS(() => onTransitionComplete?.())();
+        });
+        opacity.value = withTiming(isVisible ? 1 : 0, config);
+        break;
+
+      case 'modal':
+        scale.value = withSpring(isVisible ? 1 : 0.8, { damping: 20, stiffness: 300 });
+        translateY.value = withTiming(isVisible ? 0 : SCREEN_HEIGHT * 0.1, config);
+        opacity.value = withTiming(isVisible ? 1 : 0, config, (finished) => {
+          if (finished) runOnJS(() => onTransitionComplete?.())();
+        });
+        break;
+    }
+  }, [isVisible, transition, direction, duration, opacity, translateX, translateY, scale, onTransitionComplete]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [
+      { translateX: translateX.value },
+      { translateY: translateY.value },
+      { scale: scale.value },
+    ],
+  }));
+
+  return (
+    <ReAnimated.View style={[{ flex: 1 }, animatedStyle]}>
+      {children}
+    </ReAnimated.View>
+  );
+};
+
+// Loading State Transition
+interface LoadingTransitionProps {
+  isLoading: boolean;
+  children: React.ReactNode;
+  loadingComponent?: React.ReactNode;
+  duration?: number;
+}
+
+export const LoadingTransition: React.FC<LoadingTransitionProps> = ({
+  isLoading,
+  children,
+  loadingComponent,
+  duration = 400,
+}) => {
+  const contentOpacity = useSharedValue(isLoading ? 0 : 1);
+  const loadingOpacity = useSharedValue(isLoading ? 1 : 0);
+  const contentTranslateY = useSharedValue(isLoading ? 20 : 0);
+
+  useEffect(() => {
+    const config = {
+      duration,
+      easing: Easing.out(Easing.quad),
+    };
+
+    if (isLoading) {
+      contentOpacity.value = withTiming(0, config);
+      contentTranslateY.value = withTiming(20, config);
+      loadingOpacity.value = withTiming(1, config);
+    } else {
+      loadingOpacity.value = withTiming(0, config);
+      contentOpacity.value = withTiming(1, { ...config, delay: 100 });
+      contentTranslateY.value = withTiming(0, { ...config, delay: 100 });
+    }
+  }, [isLoading, contentOpacity, loadingOpacity, contentTranslateY, duration]);
+
+  const contentStyle = useAnimatedStyle(() => ({
+    opacity: contentOpacity.value,
+    transform: [{ translateY: contentTranslateY.value }],
+  }));
+
+  const loadingStyle = useAnimatedStyle(() => ({
+    opacity: loadingOpacity.value,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  }));
+
+  return (
+    <View style={{ flex: 1 }}>
+      <ReAnimated.View style={contentStyle}>
+        {children}
+      </ReAnimated.View>
+      {loadingComponent && (
+        <ReAnimated.View style={loadingStyle}>
+          {loadingComponent}
+        </ReAnimated.View>
+      )}
+    </View>
+  );
+};
+
+// Smooth List Item Animation
+interface ListItemAnimationProps {
+  children: React.ReactNode;
+  index: number;
+  delay?: number;
+  staggerDelay?: number;
+}
+
+export const ListItemAnimation: React.FC<ListItemAnimationProps> = ({
+  children,
+  index,
+  delay = 0,
+  staggerDelay = 50,
+}) => {
+  const opacity = useSharedValue(0);
+  const translateY = useSharedValue(30);
+  const scale = useSharedValue(0.9);
+
+  useEffect(() => {
+    const totalDelay = delay + (index * staggerDelay);
+
+    opacity.value = withTiming(1, {
+      duration: 400,
+      delay: totalDelay,
+      easing: Easing.out(Easing.quad),
+    });
+
+    translateY.value = withTiming(0, {
+      duration: 400,
+      delay: totalDelay,
+      easing: Easing.out(Easing.back(1.1)),
+    });
+
+    scale.value = withTiming(1, {
+      duration: 400,
+      delay: totalDelay,
+      easing: Easing.out(Easing.back(1.05)),
+    });
+  }, [index, delay, staggerDelay, opacity, translateY, scale]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [
+      { translateY: translateY.value },
+      { scale: scale.value },
+    ],
+  }));
+
+  return (
+    <ReAnimated.View style={animatedStyle}>
+      {children}
+    </ReAnimated.View>
+  );
+};
+
+// Success/Error State Animation
+interface StateAnimationProps {
+  children: React.ReactNode;
+  state: 'idle' | 'loading' | 'success' | 'error';
+  duration?: number;
+}
+
+export const StateAnimation: React.FC<StateAnimationProps> = ({
+  children,
+  state,
+  duration = 300,
+}) => {
+  const scale = useSharedValue(1);
+  const opacity = useSharedValue(1);
+  const rotateZ = useSharedValue(0);
+
+  useEffect(() => {
+    switch (state) {
+      case 'loading':
+        scale.value = withSequence(
+          withTiming(0.98, { duration: duration / 2 }),
+          withTiming(1, { duration: duration / 2 })
+        );
+        break;
+
+      case 'success':
+        scale.value = withSequence(
+          withTiming(1.05, { duration: duration / 3 }),
+          withSpring(1, { damping: 15, stiffness: 300 })
+        );
+        break;
+
+      case 'error':
+        rotateZ.value = withSequence(
+          withTiming(2, { duration: 50 }),
+          withTiming(-2, { duration: 50 }),
+          withTiming(2, { duration: 50 }),
+          withTiming(0, { duration: 50 })
+        );
+        break;
+
+      case 'idle':
+      default:
+        scale.value = withTiming(1, { duration });
+        rotateZ.value = withTiming(0, { duration });
+        break;
+    }
+  }, [state, scale, rotateZ, opacity, duration]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { scale: scale.value },
+      { rotateZ: `${rotateZ.value}deg` },
+    ],
+    opacity: opacity.value,
+  }));
+
+  return (
+    <ReAnimated.View style={animatedStyle}>
+      {children}
+    </ReAnimated.View>
+  );
+};
+
 export default {
   StaggerContainer,
   ParallaxScrollView,
@@ -407,4 +691,8 @@ export default {
   BounceButton,
   useFadeIn,
   useScaleIn,
+  PageTransition,
+  LoadingTransition,
+  ListItemAnimation,
+  StateAnimation,
 };

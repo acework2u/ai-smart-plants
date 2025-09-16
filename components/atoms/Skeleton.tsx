@@ -79,6 +79,97 @@ export const Skeleton: React.FC<SkeletonProps> = ({
   );
 };
 
+// Tip Card Skeleton for AI Tips Section
+export const TipCardSkeleton: React.FC<{ delay?: number }> = ({ delay = 0 }) => {
+  const { theme } = useTheme();
+  const isExpoGo = Constants.appOwnership === 'expo';
+  const skeletonSpeed = isExpoGo ? 0 : 1200;
+
+  const fadeAnim = useSharedValue(0);
+
+  React.useEffect(() => {
+    fadeAnim.value = withTiming(1, {
+      duration: 300,
+      delay,
+      easing: Easing.out(Easing.quad),
+    });
+  }, [delay]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: fadeAnim.value,
+    transform: [{
+      translateX: interpolate(fadeAnim.value, [0, 1], [-20, 0]),
+    }],
+  }));
+
+  return (
+    <Animated.View
+      style={[
+        {
+          width: 160,
+          backgroundColor: theme.colors.surface.primary,
+          borderRadius: 12,
+          padding: theme.spacing(3),
+          marginRight: theme.spacing(3),
+          shadowColor: theme.colors.black,
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: theme.isDark ? 0.2 : 0.05,
+          shadowRadius: 4,
+          elevation: 2,
+          borderWidth: 1,
+          borderColor: theme.colors.border,
+        },
+        animatedStyle,
+      ]}
+    >
+      <SkeletonPlaceholder
+        LinearGradientComponent={LinearGradient}
+        backgroundColor={theme.isDark ? '#374151' : '#f3f4f6'}
+        highlightColor={theme.isDark ? '#4b5563' : '#ffffff'}
+        speed={skeletonSpeed}
+        angle={45}
+      >
+        {/* Tip Icon */}
+        <View
+          style={{
+            width: 24,
+            height: 24,
+            borderRadius: 12,
+            marginBottom: theme.spacing(2),
+          }}
+        />
+
+        {/* Tip Title */}
+        <View
+          style={{
+            width: '80%',
+            height: 14,
+            borderRadius: 4,
+            marginBottom: theme.spacing(1),
+          }}
+        />
+
+        {/* Tip Description */}
+        <View
+          style={{
+            width: '100%',
+            height: 12,
+            borderRadius: 4,
+            marginBottom: theme.spacing(1),
+          }}
+        />
+        <View
+          style={{
+            width: '60%',
+            height: 12,
+            borderRadius: 4,
+          }}
+        />
+      </SkeletonPlaceholder>
+    </Animated.View>
+  );
+};
+
 // Plant Card Skeleton
 export const PlantCardSkeleton: React.FC<{ delay?: number }> = ({ delay = 0 }) => {
   const { theme } = useTheme();
@@ -516,6 +607,27 @@ export const PulseSkeleton: React.FC<SkeletonProps> = (props) => {
         props.style,
       ]}
     />
+  );
+};
+
+// Tips List Skeleton with horizontal scrolling layout
+export const TipsListSkeleton: React.FC<{ count?: number }> = ({ count = 3 }) => {
+  const { theme } = useTheme();
+
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        paddingRight: theme.spacing(4),
+      }}
+      accessible={true}
+      accessibilityLabel="Loading AI tips"
+      accessibilityRole="none"
+    >
+      {Array.from({ length: count }).map((_, index) => (
+        <TipCardSkeleton key={index} delay={index * 100} />
+      ))}
+    </View>
   );
 };
 

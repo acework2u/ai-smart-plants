@@ -17,7 +17,7 @@ import { GardenGridSkeleton, TipsListSkeleton, Skeleton } from '../components/at
 import RefreshControl from '../components/atoms/RefreshControl';
 import { useGardenStore } from '../stores/garden';
 import { useTheme } from '../contexts/ThemeContext';
-import { typography, radius, getSpacing } from '../core/theme';
+import { typography, radius, getSpacing, themeUtils } from '../core/theme';
 import { initializeCore, errorUtils } from '../core';
 
 export default function HomeScreen() {
@@ -166,6 +166,26 @@ export default function HomeScreen() {
 
   const recentPlants = plants.slice(0, 4); // Show last 4 plants
 
+  const getStatusStyle = (status: string) => {
+    const color = themeUtils.getStatusColor(
+      (status as 'Healthy' | 'Warning' | 'Critical') || 'Healthy'
+    );
+    return {
+      container: {
+        backgroundColor: color + '22', // subtle background
+        paddingHorizontal: getSpacing(2),
+        paddingVertical: 4,
+        borderRadius: 12,
+        alignSelf: 'center' as const,
+      },
+      text: {
+        color,
+        fontSize: typography.fontSize.xs,
+        fontFamily: typography.fontFamily.medium,
+      },
+    };
+  };
+
   const quickTips = [
     {
       id: '1',
@@ -265,10 +285,28 @@ export default function HomeScreen() {
               >
                 {quickTips.map((tip, index) => (
                   <BounceButton key={tip.id} onPress={() => {}}>
-                    <Card style={[styles.tipCard, { marginLeft: index === 0 ? 0 : getSpacing(3) }]} variant="flat">
-                      <Text style={styles.tipIcon}>{tip.icon}</Text>
-                      <Text style={styles.tipTitle}>{tip.title}</Text>
-                      <Text style={styles.tipDescription}>{tip.description}</Text>
+                    <Card
+                      style={[
+                        styles.tipCard,
+                        { marginLeft: index === 0 ? 0 : getSpacing(3) },
+                      ]}
+                      variant="flat"
+                    >
+                      <View style={{ flex: 1, justifyContent: 'space-between' }}>
+                        <Text style={styles.tipIcon}>{tip.icon}</Text>
+                        <View>
+                          <Text style={styles.tipTitle} numberOfLines={1} ellipsizeMode="tail">
+                            {tip.title}
+                          </Text>
+                          <Text
+                            style={styles.tipDescription}
+                            numberOfLines={2}
+                            ellipsizeMode="tail"
+                          >
+                            {tip.description}
+                          </Text>
+                        </View>
+                      </View>
                     </Card>
                   </BounceButton>
                 ))}
@@ -297,21 +335,31 @@ export default function HomeScreen() {
                 </View>
               ) : (
                 <View style={styles.plantsGrid}>
-                  {recentPlants.map((plant, index) => (
+                  {recentPlants.map((plant,index) => (
                     <BounceButton key={plant.id} onPress={() => handlePlantPress(plant.id)}>
-                      <Card style={styles.plantCard} variant="default">
-                        <View style={styles.plantImagePlaceholder}>
-                          <Leaf size={24} color={theme.colors.primary} />
+                      <Card style={[
+                        styles.plantCard,
+                        index % 2 === 0 && styles.cardRightGap,
+                        recentPlants.length === 1 && styles.plantCardSingle,
+                      ]} variant="default">
+                        <View style={styles.plantCardInner}>
+                          <View style={styles.plantImagePlaceholder}>
+                            <Leaf size={28} color={theme.colors.primary} />
+                          </View>
+                          <View style={{ width: '100%' }}>
+                            <Text style={styles.plantName} numberOfLines={2} ellipsizeMode="tail">
+                              {plant.name}
+                            </Text>
+                            {(() => {
+                              const st = getStatusStyle(plant.status);
+                              return (
+                                <View style={st.container}>
+                                  <Text style={st.text} numberOfLines={1}>{plant.status}</Text>
+                                </View>
+                              );
+                            })()}
+                          </View>
                         </View>
-                        <Text style={styles.plantName} numberOfLines={1}>
-                          {plant.name}
-                        </Text>
-                        <Chip
-                          label={plant.status}
-                          status={plant.status}
-                          variant="status"
-                          size="sm"
-                        />
                       </Card>
                     </BounceButton>
                   ))}
@@ -436,7 +484,10 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   tipCard: {
     width: 160,
+    height: 128,
     padding: getSpacing(3),
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
   },
   tipIcon: {
     fontSize: 24,
@@ -460,30 +511,42 @@ const createStyles = (theme: any) => StyleSheet.create({
   plantsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: getSpacing(3),
+    justifyContent: 'flex-start',
   },
   plantCard: {
-    width: '47%', // 2 columns with gap
-    aspectRatio: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: '48.5%', // 2 columnsพอดี ลดช่องว่างข้างมากเกินไป
+    aspectRatio: 0.50, // ลดความสูงลง ~10% จาก 220
     padding: getSpacing(3),
+    alignItems: 'center',
+    marginBottom: getSpacing(3),
+  },
+  cardRightGap: {
+    marginRight: getSpacing(2), // gap เฉพาะการ์ดซ้ายในแต่ละแถว
+},
+  plantCardSingle: {
+    width: '100%',
+  },
+  plantCardInner: {
+    flex: 1,
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    gap: getSpacing(2),
   },
   plantImagePlaceholder: {
-    width: 48,
-    height: 48,
+    width: 60,   // ลดสัดส่วนให้พอดีกับความสูงการ์ดใหม่
+    height: 60,
     borderRadius: radius.full,
     backgroundColor: theme.colors.primarySoft,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: getSpacing(2),
+    // marginBottom: getSpacing(2),
   },
   plantName: {
     fontSize: typography.fontSize.sm,
     fontFamily: typography.fontFamily.medium,
     color: theme.colors.text.primary,
     textAlign: 'center',
-    marginBottom: getSpacing(2),
+    marginBottom: getSpacing(1),
   },
 
   // Empty State

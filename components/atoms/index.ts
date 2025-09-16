@@ -6,10 +6,56 @@ export { Section } from './Section';
 export { default as Toast } from './Toast';
 export { default as EmptyState } from './EmptyState';
 export { default as CameraButton } from './CameraButton';
+export { default as ProgressDots } from './ProgressDots';
+export { default as OnboardingSlide } from './OnboardingSlide';
+
+// Loading & Animation Components
+export {
+  Skeleton,
+  PlantCardSkeleton,
+  TipCardSkeleton,
+  ActivityRowSkeleton,
+  NotificationSkeleton,
+  GardenGridSkeleton,
+  ActivityListSkeleton,
+  NotificationListSkeleton,
+  TipsListSkeleton,
+  ChartSkeleton,
+  PulseSkeleton,
+  ListSkeleton,
+} from './Skeleton';
+
+export {
+  ProgressiveImage,
+  ProgressivePlantImage,
+  ProgressiveAvatarImage,
+  ProgressiveBackgroundImage,
+} from './ProgressiveImage';
+
+export {
+  LoadingOverlay,
+  SuccessAnimation,
+  ErrorAnimation,
+} from './LoadingOverlay';
+
+export {
+  StaggerContainer,
+  ParallaxScrollView,
+  FlipCard,
+  SwipeToDelete,
+  BounceButton,
+  useFadeIn,
+  useScaleIn,
+  PageTransition,
+  LoadingTransition,
+  ListItemAnimation,
+  StateAnimation,
+} from './Animations';
 
 // Export types
 export type { ButtonProps } from './Button';
 export type { CardProps } from './Card';
 export type { ChipProps } from './Chip';
 export type { SectionProps } from './Section';
+export type { OnboardingSlideData } from './OnboardingSlide';
 // ToastType and ToastConfig are exported by providers to avoid duplication

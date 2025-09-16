@@ -12,7 +12,6 @@ import { Leaf, Plus, Search } from 'lucide-react-native';
 import { Button, Chip, Section } from '../../components/atoms';
 import { OptimizedFlatList } from '../../components/atoms/OptimizedFlatList';
 import { OptimizedPlantCard } from '../../components/atoms/OptimizedComponents';
-import { PlantCardSkeleton, Skeleton } from '../../components/atoms/Skeleton';
 import { useGardenStore, useFilteredPlants } from '../../stores/garden';
 import { colors, getSpacing, typography, radius } from '../../core/theme';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -22,27 +21,9 @@ export default function GardenScreen() {
   const plants = useFilteredPlants(); // Use optimized selector
   const [searchQuery, setSearchQueryLocal] = React.useState('');
   const [refreshing, setRefreshing] = React.useState(false);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [isSearching, setIsSearching] = React.useState(false);
   const { theme } = useTheme();
   const setSearchQuery = useGardenStore((s) => s.setSearchQuery);
   const setFilter = useGardenStore((s) => s.setFilter);
-
-  // Simulate initial loading
-  React.useEffect(() => {
-    const loadGardenData = async () => {
-      try {
-        // Simulate API call to load garden data
-        await new Promise(resolve => setTimeout(resolve, 1200));
-        setIsLoading(false);
-      } catch (error) {
-        console.error('Failed to load garden data:', error);
-        setIsLoading(false);
-      }
-    };
-
-    loadGardenData();
-  }, []);
 
   // Memoize plant press handler
   const handlePlantPress = useCallback((plantId: string) => {
@@ -59,30 +40,11 @@ export default function GardenScreen() {
     setRefreshing(true);
     try {
       // Simulate refresh - in real app, this would sync with backend
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise(resolve => setTimeout(resolve, 1000));
     } finally {
       setRefreshing(false);
     }
   }, []);
-
-  // Handle search with loading state
-  const handleSearch = useCallback((query: string) => {
-    setSearchQueryLocal(query);
-
-    if (query.length > 0) {
-      setIsSearching(true);
-      // Simulate search delay
-      const searchTimeout = setTimeout(() => {
-        setSearchQuery(query);
-        setIsSearching(false);
-      }, 300);
-
-      return () => clearTimeout(searchTimeout);
-    } else {
-      setSearchQuery(query);
-      setIsSearching(false);
-    }
-  }, [setSearchQuery]);
 
   // Memoized render function for optimized performance
   const renderPlantCard = useCallback(({ item: plant }: { item: any }) => (
@@ -103,7 +65,7 @@ export default function GardenScreen() {
           เพิ่มต้นไม้แรกของคุณเพื่อเริ่มต้นการดูแล
         </Text>
         <Button
-          title="เพิ่มต้นไม้"
+          title="@4H!ID!I"
           onPress={handleAddPlant}
           variant="primary"
           style={styles.emptyButton}
@@ -112,62 +74,15 @@ export default function GardenScreen() {
     </View>
   );
 
-  // Loading screen
-  if (isLoading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <View style={styles.headerSection}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <View>
-                <Skeleton width={120} height={24} borderRadius={6} style={{ marginBottom: 4 }} />
-                <Skeleton width={80} height={16} borderRadius={4} />
-              </View>
-              <Skeleton width={60} height={32} borderRadius={8} />
-            </View>
-          </View>
-        </View>
-
-        {/* Search Bar Skeleton */}
-        <View style={styles.searchBar}>
-          <Skeleton width="100%" height={40} borderRadius={20} />
-        </View>
-
-        {/* Filter Row Skeleton */}
-        <View style={styles.filterRow}>
-          {Array.from({ length: 4 }).map((_, index) => (
-            <Skeleton key={index} width={60} height={28} borderRadius={14} />
-          ))}
-        </View>
-
-        {/* Plants Grid Skeleton */}
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.listContent}>
-          <View style={styles.row}>
-            <PlantCardSkeleton delay={0} />
-            <PlantCardSkeleton delay={100} />
-          </View>
-          <View style={styles.row}>
-            <PlantCardSkeleton delay={200} />
-            <PlantCardSkeleton delay={300} />
-          </View>
-          <View style={styles.row}>
-            <PlantCardSkeleton delay={400} />
-            <PlantCardSkeleton delay={500} />
-          </View>
-        </ScrollView>
-      </SafeAreaView>
-    );
-  }
-
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Section
-          title="สวนของฉัน"
-          subtitle={`${plants.length} ต้น`}
+          title="*'-	1"
+          subtitle={`${plants.length} I`}
           rightElement={
             <Button
-              title="เพิ่ม"
+              title="@4H!"
               onPress={handleAddPlant}
               variant="ghost"
               size="sm"
@@ -179,23 +94,18 @@ export default function GardenScreen() {
 
       {/* Search & Filters */}
       <View style={styles.searchBar}>
-        <Search
-          size={18}
-          color={isSearching ? theme.colors.primary : theme.colors.text.tertiary}
-        />
+        <Search size={18} color={theme.colors.text.tertiary} />
         <TextInput
           style={styles.searchInput}
           value={searchQuery}
-          onChangeText={handleSearch}
+          onChangeText={(t) => {
+            setSearchQueryLocal(t);
+            setSearchQuery(t);
+          }}
           placeholder="ค้นหาต้นไม้..."
           placeholderTextColor={theme.colors.text.tertiary}
           returnKeyType="search"
         />
-        {isSearching && (
-          <View style={{ marginLeft: 8 }}>
-            <Skeleton width={16} height={16} borderRadius={8} animated={true} />
-          </View>
-        )}
       </View>
       <View style={styles.filterRow}>
         <Chip label="ทั้งหมด" variant="filter" onPress={() => setFilter('all')} />
@@ -206,18 +116,6 @@ export default function GardenScreen() {
 
       {plants.length === 0 ? (
         renderEmptyState()
-      ) : isSearching ? (
-        // Show skeleton during search
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.listContent}>
-          <View style={styles.row}>
-            <PlantCardSkeleton delay={0} />
-            <PlantCardSkeleton delay={50} />
-          </View>
-          <View style={styles.row}>
-            <PlantCardSkeleton delay={100} />
-            <PlantCardSkeleton delay={150} />
-          </View>
-        </ScrollView>
       ) : (
         <OptimizedFlatList
           data={plants}
