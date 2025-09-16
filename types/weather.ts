@@ -40,7 +40,8 @@ export const CurrentWeatherSchema = z.object({
   sunrise: z.date().optional(),
   sunset: z.date().optional(),
   timestamp: z.date(),
-  dataSource: z.string().default('openweathermap'),
+  // Avoid Zod .default in RN runtime; treat missing as 'openweathermap' at use sites
+  dataSource: z.string().optional(),
 });
 
 export type CurrentWeather = z.infer<typeof CurrentWeatherSchema>;
@@ -79,7 +80,8 @@ export const WeatherForecastSchema = z.object({
   location: LocationSchema,
   forecast: z.array(WeatherForecastItemSchema).max(5),
   generatedAt: z.date(),
-  dataSource: z.string().default('openweathermap'),
+  // Avoid Zod .default in RN runtime; treat missing as 'openweathermap' at use sites
+  dataSource: z.string().optional(),
 });
 
 export type WeatherForecast = z.infer<typeof WeatherForecastSchema>;
@@ -98,7 +100,8 @@ export const WeatherAlertSchema = z.object({
   areas: z.array(z.string()).optional(),
   instructions: z.array(z.string()).optional(),
   instructionsThai: z.array(z.string()).optional(),
-  isActive: z.boolean().default(true),
+  // Avoid Zod .default; undefined treated as inactive by consumers
+  isActive: z.boolean().optional(),
   source: z.string(),
 });
 
