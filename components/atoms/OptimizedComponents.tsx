@@ -29,7 +29,7 @@ interface OptimizedPlantCardProps {
   style?: ViewStyle;
 }
 
-export const OptimizedPlantCard = memo<OptimizedPlantCardProps>(({
+export const OptimizedPlantCard = memo<OptimizedPlantCardProps>(({ 
   plant,
   onPress,
   size = 'medium',
@@ -162,6 +162,7 @@ export const OptimizedPlantCard = memo<OptimizedPlantCardProps>(({
     </TouchableOpacity>
   );
 });
+OptimizedPlantCard.displayName = 'OptimizedPlantCard';
 
 // Optimized Activity Item with memoization
 interface OptimizedActivityItemProps {
@@ -178,7 +179,7 @@ interface OptimizedActivityItemProps {
   style?: ViewStyle;
 }
 
-export const OptimizedActivityItem = memo<OptimizedActivityItemProps>(({
+export const OptimizedActivityItem = memo<OptimizedActivityItemProps>(({ 
   activity,
   onPress,
   style,
@@ -284,6 +285,7 @@ export const OptimizedActivityItem = memo<OptimizedActivityItemProps>(({
     </Component>
   );
 });
+OptimizedActivityItem.displayName = 'OptimizedActivityItem';
 
 // Optimized Notification Item with memoization
 interface OptimizedNotificationItemProps {
@@ -302,7 +304,7 @@ interface OptimizedNotificationItemProps {
   style?: ViewStyle;
 }
 
-export const OptimizedNotificationItem = memo<OptimizedNotificationItemProps>(({
+export const OptimizedNotificationItem = memo<OptimizedNotificationItemProps>(({ 
   notification,
   onPress,
   onMarkRead,
@@ -434,6 +436,7 @@ export const OptimizedNotificationItem = memo<OptimizedNotificationItemProps>(({
     </TouchableOpacity>
   );
 });
+OptimizedNotificationItem.displayName = 'OptimizedNotificationItem';
 
 // Performance-optimized image component with lazy loading
 interface OptimizedImageProps {
@@ -447,7 +450,7 @@ interface OptimizedImageProps {
   onError?: () => void;
 }
 
-export const OptimizedImage = memo<OptimizedImageProps>(({
+export const OptimizedImage = memo<OptimizedImageProps>(({ 
   uri,
   width,
   height,
@@ -512,6 +515,7 @@ export const OptimizedImage = memo<OptimizedImageProps>(({
     </View>
   );
 });
+OptimizedImage.displayName = 'OptimizedImage';
 
 // Note: components are already exported above via named exports.
 // Avoid re-exporting the same identifiers to prevent duplicate export errors.
