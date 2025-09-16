@@ -1,4 +1,5 @@
 import 'react-native-reanimated';
+import '../utils/silenceExpoGoPushWarning';
 import { useFonts } from 'expo-font';
 import { Stack, usePathname, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
