@@ -513,10 +513,5 @@ export const OptimizedImage = memo<OptimizedImageProps>(({
   );
 });
 
-// Export all optimized components
-export {
-  OptimizedPlantCard,
-  OptimizedActivityItem,
-  OptimizedNotificationItem,
-  OptimizedImage,
-};
+// Note: components are already exported above via named exports.
+// Avoid re-exporting the same identifiers to prevent duplicate export errors.
