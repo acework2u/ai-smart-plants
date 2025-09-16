@@ -64,8 +64,8 @@ export default function CameraButton({
       damping: 15,
     });
 
-    // Trigger haptic feedback
-    runOnJS(haptic.camera.capture)();
+    // Trigger haptic feedback (JS context)
+    haptic.photoCapture();
   };
 
   const handlePressOut = () => {
