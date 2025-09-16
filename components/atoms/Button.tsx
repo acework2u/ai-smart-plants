@@ -93,8 +93,8 @@ export const Button: React.FC<ButtonProps> = ({
 
     // Enhanced animations
     if (animated) {
-      // Schedule ripple on JS thread via an arrow to ensure defined function
-      runOnJS(() => triggerRipple())();
+      // Trigger ripple directly in JS (no need for runOnJS)
+      triggerRipple();
 
       if (pressAnimationType === 'scale' || pressAnimationType === 'both') {
         scale.value = withSpring(0.95, { duration: 150, dampingRatio: 0.6 }, () => {

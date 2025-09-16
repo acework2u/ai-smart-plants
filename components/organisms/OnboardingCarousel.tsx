@@ -62,7 +62,8 @@ export default function OnboardingCarousel({
       damping: 20,
       stiffness: 200,
     });
-    runOnJS(updateCurrentIndex)(clampedIndex);
+    // Schedule index update on JS with explicit arrow to ensure function
+    runOnJS(() => updateCurrentIndex(clampedIndex))();
   };
 
   const updateCurrentIndex = (index: number) => {
@@ -96,7 +97,8 @@ export default function OnboardingCarousel({
       scrollX.value = startX.value - event.translationX;
     })
     .onEnd((event) => {
-      runOnJS(decideTarget)(event.translationX, event.velocityX);
+      // Wrap to avoid passing potentially undefined reference
+      runOnJS(() => decideTarget(event.translationX, event.velocityX))();
     });
 
   const animatedStyle = useAnimatedStyle(() => {
