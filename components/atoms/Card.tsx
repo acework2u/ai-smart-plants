@@ -4,6 +4,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ViewStyle,
+  StyleProp,
 } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -23,7 +24,7 @@ export interface CardProps {
   children: React.ReactNode;
   onPress?: () => void;
   variant?: 'default' | 'elevated' | 'flat';
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   padding?: number;
   hapticFeedback?: boolean;
   // Enhanced animation props

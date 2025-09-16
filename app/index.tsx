@@ -12,8 +12,8 @@ import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { Leaf, Sparkles } from 'lucide-react-native';
 import { Button, Card, Section, Chip } from '../components/atoms';
-import { StaggerContainer, ParallaxScrollView, BounceButton } from '../components/atoms/Animations';
-import { GardenGridSkeleton } from '../components/atoms/Skeleton';
+import { StaggerContainer, ParallaxScrollView, BounceButton, LoadingTransition, StateAnimation } from '../components/atoms/Animations';
+import { GardenGridSkeleton, TipsListSkeleton, Skeleton } from '../components/atoms/Skeleton';
 import RefreshControl from '../components/atoms/RefreshControl';
 import { useGardenStore } from '../stores/garden';
 import { useTheme } from '../contexts/ThemeContext';
@@ -22,22 +22,66 @@ import { initializeCore, errorUtils } from '../core';
 
 export default function HomeScreen() {
   const { plants } = useGardenStore();
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [tipsLoading, setTipsLoading] = useState(true);
+  const [plantsLoading, setPlantsLoading] = useState(true);
 
-  // Initialize core services on app start
+  // Initialize core services and load data on app start
   React.useEffect(() => {
-    initializeCore();
-    // Simulate initial loading
-    setTimeout(() => setLoading(false), 1000);
+    const initializeApp = async () => {
+      try {
+        // Initialize core services
+        await initializeCore();
+
+        // Simulate loading tips and plants data
+        const [tipsData, plantsData] = await Promise.all([
+          // Simulate AI tips loading
+          new Promise(resolve => setTimeout(resolve, 800)),
+          // Simulate plants data loading
+          new Promise(resolve => setTimeout(resolve, 600)),
+        ]);
+
+        setTipsLoading(false);
+        setPlantsLoading(false);
+
+        // Set overall loading to false when both are done
+        setTimeout(() => setLoading(false), 200);
+      } catch (error) {
+        console.error('Failed to initialize app:', error);
+        setLoading(false);
+        setTipsLoading(false);
+        setPlantsLoading(false);
+      }
+    };
+
+    initializeApp();
   }, []);
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    // Simulate refresh operations
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setRefreshing(false);
+    setTipsLoading(true);
+    setPlantsLoading(true);
+
+    try {
+      // Simulate refreshing data
+      await Promise.all([
+        // Refresh tips
+        new Promise(resolve => setTimeout(resolve, 1000)),
+        // Refresh plants
+        new Promise(resolve => setTimeout(resolve, 800)),
+      ]);
+
+      setTipsLoading(false);
+      setPlantsLoading(false);
+    } catch (error) {
+      console.error('Failed to refresh data:', error);
+      setTipsLoading(false);
+      setPlantsLoading(false);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const handleCameraPress = () => {
@@ -149,11 +193,56 @@ export default function HomeScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+          {/* Header Skeleton */}
           <View style={styles.header}>
-            <View style={{ height: 36, width: '60%', backgroundColor: theme.colors.gray300, borderRadius: 8 }} />
-            <View style={{ height: 20, width: '40%', backgroundColor: theme.colors.gray200, borderRadius: 6, marginTop: 8 }} />
+            <Skeleton width="60%" height={36} borderRadius={8} style={{ marginBottom: 8 }} />
+            <Skeleton width="40%" height={20} borderRadius={6} />
           </View>
-          <GardenGridSkeleton count={4} />
+
+          {/* Scanner Card Skeleton */}
+          <Card style={styles.scannerCard} variant="elevated">
+            <View style={styles.scannerContent}>
+              <Skeleton width={64} height={64} borderRadius={32} style={{ marginBottom: 16 }} />
+              <Skeleton width="70%" height={24} borderRadius={6} style={{ marginBottom: 8 }} />
+              <Skeleton width="90%" height={16} borderRadius={4} style={{ marginBottom: 24 }} />
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <Skeleton width={120} height={44} borderRadius={8} />
+                <Skeleton width={120} height={44} borderRadius={8} />
+              </View>
+            </View>
+          </Card>
+
+          {/* Tips Section Skeleton */}
+          <View style={styles.section}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <View>
+                <Skeleton width={120} height={20} borderRadius={4} style={{ marginBottom: 4 }} />
+                <Skeleton width={80} height={14} borderRadius={4} />
+              </View>
+              <Skeleton width={60} height={16} borderRadius={4} />
+            </View>
+            <TipsListSkeleton count={3} />
+          </View>
+
+          {/* Recent Plants Skeleton */}
+          <View style={styles.section}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <View>
+                <Skeleton width={100} height={20} borderRadius={4} style={{ marginBottom: 4 }} />
+                <Skeleton width={60} height={14} borderRadius={4} />
+              </View>
+              <Skeleton width={50} height={16} borderRadius={4} />
+            </View>
+            <View style={styles.plantsGrid}>
+              {Array.from({ length: 4 }).map((_, index) => (
+                <View key={index} style={styles.plantCard}>
+                  <Skeleton width={48} height={48} borderRadius={24} style={{ marginBottom: 8 }} />
+                  <Skeleton width="80%" height={14} borderRadius={4} style={{ marginBottom: 8 }} />
+                  <Skeleton width={60} height={24} borderRadius={12} />
+                </View>
+              ))}
+            </View>
+          </View>
         </ScrollView>
       </SafeAreaView>
     );
@@ -161,18 +250,76 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-          />
+      <LoadingTransition
+        isLoading={loading}
+        duration={400}
+        loadingComponent={
+          <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+            {/* Header Skeleton */}
+            <View style={styles.header}>
+              <Skeleton width="60%" height={36} borderRadius={8} style={{ marginBottom: 8 }} />
+              <Skeleton width="40%" height={20} borderRadius={6} />
+            </View>
+
+            {/* Scanner Card Skeleton */}
+            <Card style={styles.scannerCard} variant="elevated">
+              <View style={styles.scannerContent}>
+                <Skeleton width={64} height={64} borderRadius={32} style={{ marginBottom: 16 }} />
+                <Skeleton width="70%" height={24} borderRadius={6} style={{ marginBottom: 8 }} />
+                <Skeleton width="90%" height={16} borderRadius={4} style={{ marginBottom: 24 }} />
+                <View style={{ flexDirection: 'row', gap: 12 }}>
+                  <Skeleton width={120} height={44} borderRadius={8} />
+                  <Skeleton width={120} height={44} borderRadius={8} />
+                </View>
+              </View>
+            </Card>
+
+            {/* Tips Section Skeleton */}
+            <View style={styles.section}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <View>
+                  <Skeleton width={120} height={20} borderRadius={4} style={{ marginBottom: 4 }} />
+                  <Skeleton width={80} height={14} borderRadius={4} />
+                </View>
+                <Skeleton width={60} height={16} borderRadius={4} />
+              </View>
+              <TipsListSkeleton count={3} />
+            </View>
+
+            {/* Recent Plants Skeleton */}
+            <View style={styles.section}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <View>
+                  <Skeleton width={100} height={20} borderRadius={4} style={{ marginBottom: 4 }} />
+                  <Skeleton width={60} height={14} borderRadius={4} />
+                </View>
+                <Skeleton width={50} height={16} borderRadius={4} />
+              </View>
+              <View style={styles.plantsGrid}>
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <View key={index} style={styles.plantCard}>
+                    <Skeleton width={48} height={48} borderRadius={24} style={{ marginBottom: 8 }} />
+                    <Skeleton width="80%" height={14} borderRadius={4} style={{ marginBottom: 8 }} />
+                    <Skeleton width={60} height={24} borderRadius={12} />
+                  </View>
+                ))}
+              </View>
+            </View>
+          </ScrollView>
         }
       >
-        <StaggerContainer delay={200} staggerDelay={150}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+            />
+          }
+        >
+          <StaggerContainer delay={200} staggerDelay={150}>
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.title}>Smart Plant AI</Text>
@@ -191,22 +338,26 @@ export default function HomeScreen() {
               </Text>
 
               <View style={styles.scannerButtons}>
-                <BounceButton onPress={handleCameraPress}>
-                  <Button
-                    title="ถ่ายรูปพืช"
-                    onPress={handleCameraPress}
-                    variant="primary"
-                    style={styles.scannerButton}
-                  />
-                </BounceButton>
-                <BounceButton onPress={handleGalleryPress}>
-                  <Button
-                    title="อัปโหลดรูป"
-                    onPress={handleGalleryPress}
-                    variant="secondary"
-                    style={styles.scannerButton}
-                  />
-                </BounceButton>
+                <StateAnimation state="idle">
+                  <BounceButton onPress={handleCameraPress}>
+                    <Button
+                      title="ถ่ายรูปพืช"
+                      onPress={handleCameraPress}
+                      variant="primary"
+                      style={styles.scannerButton}
+                    />
+                  </BounceButton>
+                </StateAnimation>
+                <StateAnimation state="idle">
+                  <BounceButton onPress={handleGalleryPress}>
+                    <Button
+                      title="อัปโหลดรูป"
+                      onPress={handleGalleryPress}
+                      variant="secondary"
+                      style={styles.scannerButton}
+                    />
+                  </BounceButton>
+                </StateAnimation>
               </View>
             </View>
           </Card>
@@ -215,56 +366,72 @@ export default function HomeScreen() {
           <Section
             title="เคล็ดลับวันนี้"
             subtitle="แนะนำจาก AI"
-            rightElement={<Text style={styles.seeAllText}>ดูทั้งหมด</Text>}
-            onRightPress={() => router.push('/insights')}
+            rightElement={!tipsLoading ? <Text style={styles.seeAllText}>ดูทั้งหมด</Text> : null}
+            onRightPress={!tipsLoading ? () => router.push('/insights') : undefined}
             style={styles.section}
           >
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.tipsContainer}
-            >
-              {quickTips.map((tip, index) => (
-                <BounceButton key={tip.id} onPress={() => {}}>
-                  <Card style={[styles.tipCard, { marginLeft: index === 0 ? 0 : getSpacing(3) }]} variant="flat">
-                    <Text style={styles.tipIcon}>{tip.icon}</Text>
-                    <Text style={styles.tipTitle}>{tip.title}</Text>
-                    <Text style={styles.tipDescription}>{tip.description}</Text>
-                  </Card>
-                </BounceButton>
-              ))}
-            </ScrollView>
-          </Section>
-
-          {/* Recent Plants */}
-          {recentPlants.length > 0 && (
-            <Section
-              title="ต้นไม้ล่าสุด"
-              subtitle={`${plants.length} ต้น`}
-              rightElement={<Text style={styles.seeAllText}>ดูสวน</Text>}
-              onRightPress={() => router.push('/garden')}
-              style={styles.section}
-            >
-              <View style={styles.plantsGrid}>
-                {recentPlants.map((plant, index) => (
-                  <BounceButton key={plant.id} onPress={() => handlePlantPress(plant.id)}>
-                    <Card style={styles.plantCard} variant="default">
-                      <View style={styles.plantImagePlaceholder}>
-                        <Leaf size={24} color={theme.colors.primary} />
-                      </View>
-                      <Text style={styles.plantName} numberOfLines={1}>
-                        {plant.name}
-                      </Text>
-                      <Chip
-                        label={plant.status}
-                        status={plant.status}
-                        variant="status"
-                        size="sm"
-                      />
+            {tipsLoading ? (
+              <TipsListSkeleton count={3} />
+            ) : (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.tipsContainer}
+              >
+                {quickTips.map((tip, index) => (
+                  <BounceButton key={tip.id} onPress={() => {}}>
+                    <Card style={[styles.tipCard, { marginLeft: index === 0 ? 0 : getSpacing(3) }]} variant="flat">
+                      <Text style={styles.tipIcon}>{tip.icon}</Text>
+                      <Text style={styles.tipTitle}>{tip.title}</Text>
+                      <Text style={styles.tipDescription}>{tip.description}</Text>
                     </Card>
                   </BounceButton>
                 ))}
-              </View>
+              </ScrollView>
+            )}
+          </Section>
+
+          {/* Recent Plants */}
+          {(plantsLoading || recentPlants.length > 0) && (
+            <Section
+              title="ต้นไม้ล่าสุด"
+              subtitle={plantsLoading ? "กำลังโหลด..." : `${plants.length} ต้น`}
+              rightElement={!plantsLoading && recentPlants.length > 0 ? <Text style={styles.seeAllText}>ดูสวน</Text> : null}
+              onRightPress={!plantsLoading ? () => router.push('/garden') : undefined}
+              style={styles.section}
+            >
+              {plantsLoading ? (
+                <View style={styles.plantsGrid}>
+                  {Array.from({ length: 4 }).map((_, index) => (
+                    <View key={index} style={styles.plantCard}>
+                      <Skeleton width={48} height={48} borderRadius={24} style={{ marginBottom: 8 }} />
+                      <Skeleton width="80%" height={14} borderRadius={4} style={{ marginBottom: 8 }} />
+                      <Skeleton width={60} height={24} borderRadius={12} />
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <View style={styles.plantsGrid}>
+                  {recentPlants.map((plant, index) => (
+                    <BounceButton key={plant.id} onPress={() => handlePlantPress(plant.id)}>
+                      <Card style={styles.plantCard} variant="default">
+                        <View style={styles.plantImagePlaceholder}>
+                          <Leaf size={24} color={theme.colors.primary} />
+                        </View>
+                        <Text style={styles.plantName} numberOfLines={1}>
+                          {plant.name}
+                        </Text>
+                        <Chip
+                          label={plant.status}
+                          status={plant.status}
+                          variant="status"
+                          size="sm"
+                        />
+                      </Card>
+                    </BounceButton>
+                  ))}
+                </View>
+              )}
             </Section>
           )}
 
@@ -289,10 +456,11 @@ export default function HomeScreen() {
             </Card>
           )}
 
-          {/* Bottom spacing for tab bar */}
-          <View style={styles.bottomSpacing} />
-        </StaggerContainer>
-      </ScrollView>
+            {/* Bottom spacing for tab bar */}
+            <View style={styles.bottomSpacing} />
+          </StaggerContainer>
+        </ScrollView>
+      </LoadingTransition>
     </SafeAreaView>
   );
 }
