@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Plant, CreatePlantInput, UpdatePlantInput, GardenFilter, GardenStats, STORAGE_KEYS } from '../types';
+import { generateId } from '../utils/ids';
 
 interface GardenState {
   plants: Plant[];
@@ -70,7 +71,7 @@ export const useGardenStore = create<GardenState & GardenActions>()(
       addPlant: (plantInput) => {
         const newPlant: Plant = {
           ...plantInput,
-          id: crypto.randomUUID(),
+          id: generateId(),
           createdAt: new Date(),
           updatedAt: new Date(),
         };
@@ -278,7 +279,7 @@ export const useGardenStore = create<GardenState & GardenActions>()(
 
       // Analysis integration
       addPlantFromScan: (plantData, analysisId) => {
-        const plantId = crypto.randomUUID();
+        const plantId = generateId();
         const newPlant: Plant = {
           ...plantData,
           id: plantId,

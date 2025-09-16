@@ -1,4 +1,6 @@
 // Central export for all core modules
+import { Platform, Dimensions } from 'react-native';
+import { generateId as genId } from '../utils/ids';
 export * from './theme';
 export * from './haptics';
 
@@ -192,8 +194,7 @@ export const errorUtils = {
 export const storageUtils = {
   // Generate unique IDs
   generateId: (): string => {
-    return crypto.randomUUID ? crypto.randomUUID() :
-           `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    return genId();
   },
 
   // Format dates for consistent storage

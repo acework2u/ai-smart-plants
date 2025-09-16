@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { generateId } from '../utils/ids';
 
 // Plant health status
 export type PlantStatus = 'Healthy' | 'Warning' | 'Critical';
@@ -85,7 +86,7 @@ export const validatePlant = (data: unknown): Plant => {
 export const validateCreatePlantInput = (data: unknown): CreatePlantInput => {
   const plantData = {
     ...(data as object),
-    id: crypto.randomUUID(),
+    id: generateId(),
     createdAt: new Date(),
     updatedAt: new Date(),
   };

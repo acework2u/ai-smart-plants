@@ -12,6 +12,7 @@ import {
   PlantPrefs,
   STORAGE_KEYS
 } from '../types';
+import { generateId } from '../utils/ids';
 
 interface ActivityState {
   activities: Record<string, ActivityEntry[]>; // plantId -> activities
@@ -77,7 +78,7 @@ export const useActivityStore = create<ActivityState & ActivityActions>()(
       addActivity: (activityInput) => {
         const newActivity: ActivityEntry = {
           ...activityInput,
-          id: crypto.randomUUID(),
+          id: generateId(),
           createdAt: new Date(),
         };
 
@@ -287,7 +288,7 @@ export const useActivityStore = create<ActivityState & ActivityActions>()(
       importActivities: (plantId, activities) => {
         const newActivities = activities.map(activityInput => ({
           ...activityInput,
-          id: crypto.randomUUID(),
+          id: generateId(),
           createdAt: new Date(),
         }));
 
