@@ -364,28 +364,36 @@ export const useGardenStore = create<GardenState & GardenActions>()(
 );
 
 // Computed selectors (optimized to prevent unnecessary re-renders)
-export const useFilteredPlants = () => {
-  return useGardenStore((state) => {
-    // Work on a shallow copy to avoid mutating store state (sort mutates in place)
-    let filtered = [...state.plants];
+import shallow from 'zustand/shallow';
 
-    // Apply status filter
-    if (state.filter !== 'all') {
-      filtered = filtered.filter(plant => plant.status === state.filter);
+export const useFilteredPlants = () => {
+  // Select only the pieces we need; shallow compare to avoid needless re-renders
+  const { plants, filter, searchQuery } = useGardenStore(
+    (state) => ({ plants: state.plants, filter: state.filter, searchQuery: state.searchQuery }),
+    shallow
+  );
+
+  // Compute a stable, memoized result so getSnapshot returns same reference when inputs unchanged
+  const result = React.useMemo(() => {
+    let list = plants.slice();
+
+    if (filter !== 'all') {
+      list = list.filter((plant) => plant.status === filter);
     }
 
-    // Apply search query
-    if (state.searchQuery) {
-      const query = state.searchQuery.toLowerCase();
-      filtered = filtered.filter(plant =>
-        plant.name.toLowerCase().includes(query) ||
-        plant.scientificName?.toLowerCase().includes(query)
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(
+        (plant) =>
+          plant.name.toLowerCase().includes(q) ||
+          plant.scientificName?.toLowerCase().includes(q)
       );
     }
 
-    // Sort by name by default (non-mutating)
-    return filtered.sort((a, b) => a.name.localeCompare(b.name));
-  });
+    return list.sort((a, b) => a.name.localeCompare(b.name));
+  }, [plants, filter, searchQuery]);
+
+  return result;
 };
 
 export const usePlantById = (id: string | null) => {
