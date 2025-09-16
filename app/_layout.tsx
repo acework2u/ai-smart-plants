@@ -42,7 +42,7 @@ export default function RootLayout() {
         }
 
         if (hasSeen && pathname === '/simple-onboarding') {
-          router.replace('/');
+          router.replace('/(tabs)');
         }
       } catch (e) {
         // On error, fall back to showing home
