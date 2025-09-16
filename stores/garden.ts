@@ -366,7 +366,8 @@ export const useGardenStore = create<GardenState & GardenActions>()(
 // Computed selectors (optimized to prevent unnecessary re-renders)
 export const useFilteredPlants = () => {
   return useGardenStore((state) => {
-    let filtered = state.plants;
+    // Work on a shallow copy to avoid mutating store state (sort mutates in place)
+    let filtered = [...state.plants];
 
     // Apply status filter
     if (state.filter !== 'all') {
@@ -382,7 +383,7 @@ export const useFilteredPlants = () => {
       );
     }
 
-    // Sort by name by default
+    // Sort by name by default (non-mutating)
     return filtered.sort((a, b) => a.name.localeCompare(b.name));
   });
 };
