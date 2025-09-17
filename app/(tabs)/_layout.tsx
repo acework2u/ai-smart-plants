@@ -1,41 +1,36 @@
-import React from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { Tabs } from 'expo-router';
 import { Platform } from 'react-native';
 import { Home, Leaf, BarChart3, Settings } from 'lucide-react-native';
 import { colors, getSpacing } from '../../core/theme';
-import { useHaptic } from '../../core/haptics';
+import { hapticService } from '../../core/haptics';
 
-export default function TabLayout() {
-  const haptic = useHaptic();
+function TabLayoutInner() {
+  const handleTabPress = useCallback(() => {
+    hapticService.tabSwitch();
+  }, []);
 
-  const handleTabPress = () => {
-    haptic.tabSwitch();
-  };
+  const screenOptions = useMemo(() => ({
+    tabBarActiveTintColor: colors.primary,
+    tabBarInactiveTintColor: colors.text.tertiary,
+    tabBarStyle: {
+      backgroundColor: colors.white,
+      borderTopColor: colors.border.light,
+      borderTopWidth: 1,
+      paddingTop: getSpacing(2),
+      paddingBottom: Platform.OS === 'ios' ? getSpacing(6) : getSpacing(3),
+      height: Platform.OS === 'ios' ? 90 : 70,
+    },
+    tabBarLabelStyle: {
+      fontSize: 12,
+      fontWeight: '500' as const,
+      marginTop: getSpacing(1),
+    },
+    headerShown: false,
+  }), []);
 
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.text.tertiary,
-        tabBarStyle: {
-          backgroundColor: colors.white,
-          borderTopColor: colors.border.light,
-          borderTopWidth: 1,
-          paddingTop: getSpacing(2),
-          paddingBottom: Platform.OS === 'ios' ? getSpacing(6) : getSpacing(3),
-          height: Platform.OS === 'ios' ? 90 : 70,
-        },
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '500',
-          marginTop: getSpacing(1),
-        },
-        headerShown: false,
-      }}
-      screenListeners={{
-        tabPress: handleTabPress,
-      }}
-    >
+    <Tabs screenOptions={screenOptions} screenListeners={{ tabPress: handleTabPress }}>
       <Tabs.Screen
         name="index"
         options={{
@@ -75,3 +70,5 @@ export default function TabLayout() {
     </Tabs>
   );
 }
+
+export default React.memo(TabLayoutInner);

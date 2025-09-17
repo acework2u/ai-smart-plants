@@ -1,0 +1,65 @@
+=== CODEX CLI STATUS REPORT ===
+Date: 2025-09-17 07:14:45
+Platform: Mac OS M4
+Sprint: 1 - Fix Skeleton Loading & Gradient
+
+STATUS: Awaiting Codex CLI pickup
+CURRENT_TASK: Not started yet
+COMPLETION: 0%
+
+CRITICAL UPDATE FROM RESEARCH AGENT:
+Agent 1 has completed preliminary research and found the root issue:
+
+ISSUE IDENTIFIED:
+- Duplicate expo-linear-gradient entries in package.json (lines 37 & 66)
+- Version conflict: ~13.0.2 vs ~15.0.7
+- No actual SkeletonPlaceholder.tsx file (functionality is in Skeleton.tsx)
+- BVLinearGradient issue already resolved in previous commits
+
+REVISED ASSIGNMENT FOR CODEX CLI:
+----------------------------------
+STEP 1: Fix package.json duplicate (15 min)
+- Remove duplicate expo-linear-gradient entry on line 66
+- Keep version ~13.0.2 (Expo SDK 54 compatible)
+
+STEP 2: Clean dependencies (15 min)
+- Remove react-native-linear-gradient from package.json
+- Run npm install to update node_modules
+
+STEP 3: Verify installation (30 min)
+- Test gradient animations in Skeleton.tsx
+- Ensure no console errors
+- Verify M4 compatibility
+
+STEP 4: Test loading states (1.5 hr)
+- Navigate through all screens
+- Verify skeleton loading works properly
+- Test on iOS Simulator (M4 optimized)
+
+UPDATED_EXPECTED_COMPLETION: 2.5 hours (reduced from 3 hours)
+
+NEXT_STEP: Waiting for Codex CLI to acknowledge assignment
+BLOCKERS: None - path is clear
+
+---
+PM Note: Research phase complete. Ready for Codex CLI execution.
+
+---
+Date: 2025-09-17 07:55:12
+Sprint: 2 - AI Tips & Weather Integration
+
+STEP 1: Interface Harmonization (WeatherService.ts)
+STATUS: Completed @ 2025-09-17 09:20
+NOTE: WeatherService now returns CurrentWeather; type mismatch resolved
+
+STEP 2: hooks/useAI.ts Implementation
+STATUS: Completed @ 2025-09-17 09:35
+NOTE: useWeatherAI / useAITips hooks wired to weather store and recommendation engine
+
+STEP 3: Screen Integration (Home & Plant Detail)
+STATUS: Completed @ 2025-09-17 09:42
+NOTE: Home + plant detail screens render generated AI tips with Thai copy
+
+STEP 4: Testing & Validation (AI Tips + Weather)
+STATUS: Pending
+NOTE: Awaiting end-to-end validation pass on simulator and typecheck

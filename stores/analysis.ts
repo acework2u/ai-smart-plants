@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { generateId } from '../utils/ids';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -196,7 +197,7 @@ export const useAnalysisStore = create<AnalysisState & AnalysisActions>()(
 
           // Mock analysis result
           const mockAnalysis: SmartPlantAnalysis = {
-            analysisId: crypto.randomUUID(),
+            analysisId: generateId(),
             plantName: 'Monstera Deliciosa',
             plantNameThai: 'มอนสเตอร่า เดลิโซซา',
             scientificName: 'Monstera deliciosa',
@@ -206,7 +207,7 @@ export const useAnalysisStore = create<AnalysisState & AnalysisActions>()(
             issues: [],
             recommendations: [
               {
-                id: crypto.randomUUID(),
+                id: generateId(),
                 category: 'watering',
                 priority: 3,
                 title: 'Regular Watering Schedule',
@@ -435,7 +436,7 @@ export const useAnalysisStore = create<AnalysisState & AnalysisActions>()(
         // Mock tip generation based on plant and context
         const baseTips: AITip[] = [
           {
-            id: crypto.randomUUID(),
+            id: generateId(),
             title: 'การรดน้ำที่เหมาะสม',
             description: 'รดน้ำเมื่อดินแห้งลึกประมาณ 2-3 เซนติเมตร หลีกเลี่ยงการรดน้ำเกินไป',
             category: 'watering',
@@ -448,7 +449,7 @@ export const useAnalysisStore = create<AnalysisState & AnalysisActions>()(
             isActive: true,
           },
           {
-            id: crypto.randomUUID(),
+            id: generateId(),
             title: 'แสงแดดที่เหมาะสม',
             description: 'ให้แสงแดดแบบกรองหรือแสงแดดแผ่วๆ หลีกเลี่ยงแสงแดดโดยตรง',
             category: 'lighting',

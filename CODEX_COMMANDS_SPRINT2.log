@@ -1,0 +1,389 @@
+=== SPRINT 2: CODEX CLI ASSIGNMENT ===
+Date: 2025-09-17 07:37:45
+Assigned by: Claude Code (Project Manager)
+Previous Sprint: Sprint 1 COMPLETED SUCCESSFULLY
+
+COMMAND: Implement AI Tips & Weather Integration
+CONTEXT: Sprint 2 - Dynamic AI Tips with Weather Context
+PRIORITY: High
+PLATFORM: Mac OS M4
+DURATION: 3 hours maximum
+
+PRE-REQUISITES COMPLETED:
+✅ expo-linear-gradient working
+✅ Skeleton loading functional
+✅ Development server stable
+✅ Dependencies clean
+
+---
+
+STEP 1: WeatherService Implementation (45 min)
+--------------------------------------------
+ACTION: Create Mock Weather Service with Thai context
+TARGET_FILE: features/ai/weather.ts
+
+IMPLEMENTATION_SPEC:
+```typescript
+export interface Weather {
+  tempC: number;
+  humidity: number;
+  condition: 'sunny' | 'rainy' | 'hot' | 'cool';
+  location: string;
+}
+
+export interface WeatherService {
+  getCurrent(): Promise<Weather>;
+}
+
+export class MockWeatherService implements WeatherService {
+  async getCurrent(): Promise<Weather> {
+    // Mac M4 optimized random generation
+    const conditions = ['sunny', 'rainy', 'hot', 'cool'] as const;
+    const thaiWeatherPatterns = [
+      { tempC: 33, humidity: 75, condition: 'hot', location: 'Bangkok, Thailand' },
+      { tempC: 28, humidity: 85, condition: 'rainy', location: 'Bangkok, Thailand' },
+      { tempC: 25, humidity: 60, condition: 'cool', location: 'Chiang Mai, Thailand' },
+      { tempC: 31, humidity: 70, condition: 'sunny', location: 'Bangkok, Thailand' }
+    ];
+
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 200));
+
+    return thaiWeatherPatterns[Math.floor(Math.random() * thaiWeatherPatterns.length)];
+  }
+}
+```
+
+EXPECTED_OUTPUT:
+- Weather service interface created
+- Mock implementation with Thai weather patterns
+- Proper TypeScript types exported
+- 200ms simulated API delay
+
+VALIDATION:
+- File compiles without TypeScript errors
+- Service returns consistent Weather objects
+- Random generation works on M4 architecture
+
+---
+
+STEP 2: AI Tips Enhancement (1 hr)
+----------------------------------
+ACTION: Enhance existing tips system with dynamic weather integration
+TARGET_FILES:
+- features/ai/tips.ts
+- features/ai/scan.ts (if needed)
+
+CURRENT_STATE_ANALYSIS:
+Codex CLI should first analyze existing tips implementation in:
+- Check features/ai/ directory
+- Review any existing tips.ts files
+- Understand current tip structure
+
+ENHANCEMENT_SPEC:
+```typescript
+// features/ai/tips.ts
+export interface Tip {
+  id: string;
+  title: string;
+  desc: string;
+  priority: 'high' | 'medium' | 'low';
+  weatherContext?: string[];
+}
+
+export interface ScanIssue {
+  code: 'yellow_leaf' | 'fungus' | 'overwater' | 'underwater';
+  severity: 'mild' | 'moderate' | 'severe';
+}
+
+// Base tips for plants (existing + enhanced)
+export function baseTips(plantName?: string): Tip[] {
+  // Return plant-specific base tips
+}
+
+// Dynamic weather-aware tips
+export function dynamicTips(params: {
+  plantName?: string;
+  weather?: Weather;
+  issues?: ScanIssue[];
+}): Tip[] {
+  const { plantName, weather, issues } = params;
+  const tips: Tip[] = [];
+
+  // Weather-based tips
+  if (weather) {
+    if (weather.condition === 'hot' && weather.tempC > 32) {
+      tips.push({
+        id: 'hot-weather-care',
+        title: 'อากาศร้อน - เพิ่มการรดน้ำ',
+        desc: `อุณหภูมิ ${weather.tempC}°C วันนี้ร้อนมาก ควรรดน้ำเพิ่มขึ้น 20%`,
+        priority: 'high',
+        weatherContext: ['hot']
+      });
+    }
+
+    if (weather.condition === 'rainy' && weather.humidity > 80) {
+      tips.push({
+        id: 'rainy-humidity-care',
+        title: 'ฝนตก - ระวังความชื้นสูง',
+        desc: `ความชื้น ${weather.humidity}% ลดการรดน้ำ เพิ่มการระบายอากาศ`,
+        priority: 'medium',
+        weatherContext: ['rainy']
+      });
+    }
+  }
+
+  return tips;
+}
+
+// Merge base + dynamic tips
+export function getAllTips(params: {
+  plantName?: string;
+  weather?: Weather;
+  issues?: ScanIssue[];
+}): Tip[] {
+  const base = baseTips(params.plantName);
+  const dynamic = dynamicTips(params);
+
+  // Merge and deduplicate
+  return [...base, ...dynamic];
+}
+```
+
+EXPECTED_OUTPUT:
+- Enhanced tips system with weather awareness
+- Thai language context for weather conditions
+- Priority-based tip ordering
+- Merge function for base + dynamic tips
+
+VALIDATION:
+- Tips change based on weather conditions
+- Thai text renders properly
+- Priority system works correctly
+
+---
+
+STEP 3: React Hooks Implementation (1 hr)
+-----------------------------------------
+ACTION: Create hooks for weather and AI tips consumption
+TARGET_FILE: hooks/useAI.ts
+
+IMPLEMENTATION_SPEC:
+```typescript
+// hooks/useAI.ts
+import { useState, useEffect } from 'react';
+import { MockWeatherService, Weather } from '@/features/ai/weather';
+import { getAllTips, Tip } from '@/features/ai/tips';
+
+export function useWeather(): {
+  weather: Weather | null;
+  loading: boolean;
+  error: string | null;
+  refresh: () => void;
+} {
+  const [weather, setWeather] = useState<Weather | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchWeather = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const weatherData = await MockWeatherService.getCurrent();
+      setWeather(weatherData);
+    } catch (err) {
+      setError('Failed to fetch weather data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchWeather();
+  }, []);
+
+  return {
+    weather,
+    loading,
+    error,
+    refresh: fetchWeather
+  };
+}
+
+export function useAITips(params: {
+  plantName?: string;
+  issues?: any[];
+}): {
+  tips: Tip[];
+  loading: boolean;
+  refresh: () => void;
+} {
+  const { weather } = useWeather();
+  const [loading, setLoading] = useState(true);
+
+  const tips = getAllTips({
+    plantName: params.plantName,
+    weather: weather || undefined,
+    issues: params.issues
+  });
+
+  useEffect(() => {
+    // Simulate processing time
+    const timer = setTimeout(() => setLoading(false), 300);
+    return () => clearTimeout(timer);
+  }, [weather, params.plantName]);
+
+  return {
+    tips,
+    loading,
+    refresh: () => {
+      setLoading(true);
+      setTimeout(() => setLoading(false), 300);
+    }
+  };
+}
+```
+
+EXPECTED_OUTPUT:
+- useWeather hook with loading states
+- useAITips hook that consumes weather data
+- Error handling for network failures
+- Refresh functionality for both hooks
+
+VALIDATION:
+- Hooks return proper data structures
+- Loading states work correctly
+- Re-rendering optimized
+
+---
+
+STEP 4: Screen Integration (1.25 hr)
+------------------------------------
+ACTION: Integrate dynamic tips in Home and Plant Detail screens
+TARGET_SCREENS:
+- app/index.tsx (Home screen)
+- app/plant/[id].tsx (Plant Detail screen)
+
+HOME_SCREEN_INTEGRATION:
+```typescript
+// app/index.tsx
+import { useAITips, useWeather } from '@/hooks/useAI';
+
+export default function HomeScreen() {
+  const { weather, loading: weatherLoading } = useWeather();
+  const { tips, loading: tipsLoading } = useAITips({
+    plantName: 'General', // or featured plant
+  });
+
+  return (
+    <ScrollView>
+      {/* Weather Info Card */}
+      <View style={styles.weatherCard}>
+        {weatherLoading ? (
+          <Skeleton width={200} height={60} />
+        ) : weather ? (
+          <View>
+            <Text>📍 {weather.location}</Text>
+            <Text>{weather.tempC}°C • {weather.humidity}% ความชื้น</Text>
+            <Text>สภาพอากาศ: {getWeatherText(weather.condition)}</Text>
+          </View>
+        ) : null}
+      </View>
+
+      {/* Dynamic AI Tips */}
+      <Section title="คำแนะนำ AI วันนี้" icon="brain">
+        {tipsLoading ? (
+          <TipsListSkeleton />
+        ) : (
+          tips.slice(0, 3).map(tip => (
+            <TipCard key={tip.id} tip={tip} />
+          ))
+        )}
+      </Section>
+    </ScrollView>
+  );
+}
+```
+
+PLANT_DETAIL_INTEGRATION:
+```typescript
+// app/plant/[id].tsx
+import { useAITips } from '@/hooks/useAI';
+
+export default function PlantDetailScreen() {
+  const { id } = useLocalSearchParams();
+  const plant = usePlantById(id as string);
+
+  const { tips, loading } = useAITips({
+    plantName: plant?.name,
+    issues: [] // Add plant-specific issues if available
+  });
+
+  return (
+    <ScrollView>
+      {/* Plant Header */}
+      {/* Care Schedule */}
+
+      {/* AI Tips Section */}
+      <Section title="คำแนะนำสำหรับพืชนี้" icon="lightbulb">
+        {loading ? (
+          <TipsListSkeleton />
+        ) : (
+          tips.map(tip => (
+            <TipCard
+              key={tip.id}
+              tip={tip}
+              variant={tip.priority === 'high' ? 'urgent' : 'normal'}
+            />
+          ))
+        )}
+      </Section>
+    </ScrollView>
+  );
+}
+```
+
+EXPECTED_OUTPUT:
+- Weather info displayed on Home screen
+- Dynamic tips change based on weather
+- Plant-specific tips on detail screen
+- Proper loading states with skeletons
+- Thai language throughout
+
+VALIDATION:
+- Weather data appears correctly
+- Tips update when weather changes
+- Different plants show different tips
+- Loading states smooth and responsive
+
+---
+
+DELIVERABLES CHECKLIST:
+□ WeatherService created with Thai patterns
+□ Enhanced tips system with weather awareness
+□ useWeather and useAITips hooks functional
+□ Home screen shows weather + dynamic tips
+□ Plant Detail screen shows contextual tips
+□ All TypeScript errors resolved
+□ Thai language content renders properly
+□ Loading states implemented
+□ No console errors during navigation
+
+REPORT_BACK_FORMAT:
+Update CODEX_STATUS_SPRINT2.log with:
+- Current step completion
+- Any implementation challenges
+- Screenshots of working features
+- Performance observations on M4
+- Next step timeline
+
+MAC_M4_OPTIMIZATIONS:
+- Use efficient random generation
+- Optimize async operations
+- Leverage M4 performance for smooth animations
+- Test memory usage during tip generation
+
+---
+END OF SPRINT 2 ASSIGNMENT
+
+Claude Code will monitor progress every 30 minutes and validate deliverables upon completion.

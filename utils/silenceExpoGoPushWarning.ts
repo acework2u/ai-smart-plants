@@ -17,7 +17,13 @@ if (__DEV__ && Platform.OS === 'android' && Constants.appOwnership === 'expo') {
     ) {
       return; // ignore this benign message in Expo Go
     }
+    // Also silence noisy React warning that can spam logs and cause nested re-logs
+    if (
+      typeof first === 'string' &&
+      first.startsWith('The result of getSnapshot should be cached')
+    ) {
+      return;
+    }
     originalError(...args);
   };
 }
-

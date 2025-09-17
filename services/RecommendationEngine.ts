@@ -390,7 +390,7 @@ export class RecommendationEngine {
     const { plant } = context;
 
     switch (plant.status) {
-      case PlantStatus.Critical:
+      case 'Critical':
         recommendations.push(this.createRecommendation({
           category: 'treatment',
           priority: 5,
@@ -413,7 +413,7 @@ export class RecommendationEngine {
         }));
         break;
 
-      case PlantStatus.Warning:
+      case 'Warning':
         recommendations.push(this.createRecommendation({
           category: 'treatment',
           priority: 4,
@@ -436,7 +436,7 @@ export class RecommendationEngine {
         }));
         break;
 
-      case PlantStatus.Healthy:
+      case 'Healthy':
         recommendations.push(this.createRecommendation({
           category: 'enhancement',
           priority: 2,
@@ -459,7 +459,7 @@ export class RecommendationEngine {
         }));
         break;
 
-      case PlantStatus.Thriving:
+      case 'Thriving':
         recommendations.push(this.createRecommendation({
           category: 'enhancement',
           priority: 1,
@@ -621,9 +621,9 @@ export class RecommendationEngine {
       let finalPriority = rec.priority;
 
       // Boost priority based on plant health
-      if (context.plant.status === PlantStatus.Critical) {
+      if (context.plant.status === 'Critical') {
         finalPriority = Math.min(5, finalPriority + 2);
-      } else if (context.plant.status === PlantStatus.Warning) {
+      } else if (context.plant.status === 'Warning') {
         finalPriority = Math.min(5, finalPriority + 1);
       }
 
@@ -692,8 +692,11 @@ export class RecommendationEngine {
     difficulty?: 'beginner' | 'intermediate' | 'advanced';
     estimatedTime?: string;
   }): PlantRecommendation {
+    // RN may not expose crypto.randomUUID; fall back to util
+    const { generateId } = require('../utils/ids');
+    const id = (global as any)?.crypto?.randomUUID?.() ?? generateId();
     return {
-      id: crypto.randomUUID(),
+      id,
       category: params.category,
       priority: params.priority,
       title: params.title,

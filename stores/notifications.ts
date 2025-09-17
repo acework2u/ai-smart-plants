@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { generateId } from '../utils/ids';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -112,7 +113,7 @@ export const useNotificationStore = create<NotificationState & NotificationActio
       addNotification: (notificationInput) => {
         const newNotification: NotiItem = {
           ...notificationInput,
-          id: crypto.randomUUID(),
+          id: generateId(),
           createdAt: new Date(),
           read: notificationInput.read || false,
         };

@@ -7,6 +7,7 @@ export * from './analysis';
 
 // Store utilities and helpers
 import { useGardenStore } from './garden';
+import { generateId } from '../utils/ids';
 import { useActivityStore } from './activity';
 import { useNotificationStore } from './notifications';
 import { usePreferencesStore } from './preferences';
@@ -26,7 +27,7 @@ export const combinedActions = {
 
   // Add plant with initial activity
   addPlantWithActivity: (plantInput: any, initialActivity?: any) => {
-    const plantId = crypto.randomUUID();
+    const plantId = generateId();
     const plantData = { ...plantInput, id: plantId };
 
     useGardenStore.getState().addPlant(plantData);

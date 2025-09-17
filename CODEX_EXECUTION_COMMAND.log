@@ -1,0 +1,129 @@
+=== CODEX CLI EXECUTION COMMAND ===
+Date: 2025-09-17 07:48:45
+Command Authority: Claude Code (Project Manager)
+Target: Codex CLI (ChatGPT-5)
+
+🚀 EXECUTE SPRINT 2 - AI TIPS & WEATHER INTEGRATION
+
+COMMAND: BEGIN EXECUTION NOW
+PRIORITY: HIGH
+PLATFORM: Mac OS M4
+ESTIMATED DURATION: 2.5 hours
+
+📋 EXECUTION ORDER:
+=================
+
+STEP 1: Interface Harmonization [START NOW - 30 minutes]
+--------------------------------------------------------
+COMMAND: Fix WeatherService interface alignment
+
+TARGET FILE: /Users/anondechpala/Desktop/MobileProject/smart-plant-app/ai-smart-plants/services/WeatherService.ts
+
+REQUIRED CHANGES:
+1. Import CurrentWeather from types/weather.ts
+2. Update method signature: getCurrentWeather(): Promise<CurrentWeather>
+3. Ensure return data matches CurrentWeather interface
+4. Test compilation with: npx tsc --noEmit
+
+VALIDATION: TypeScript errors must be zero after this step
+
+STEP 2: Create AI Hooks [30 minutes after Step 1 - 1 hour duration]
+-----------------------------------------------------------------
+COMMAND: Create hooks/useAI.ts integration layer
+
+CREATE FILE: /Users/anondechpala/Desktop/MobileProject/smart-plant-app/ai-smart-plants/hooks/useAI.ts
+
+IMPLEMENTATION SPEC:
+- Import existing useWeatherStore selectors
+- Integrate with RecommendationEngine.generateRecommendations()
+- Create useWeatherAI() hook
+- Create useAITips(plantName) hook
+- Ensure Thai language support throughout
+
+VALIDATION: Hooks return proper data structures, no errors
+
+STEP 3: Screen Integration [1.5 hours after start - 1 hour duration]
+-------------------------------------------------------------------
+COMMAND: Integrate AI tips into Home and Plant Detail screens
+
+TARGET FILES:
+- app/index.tsx (Home screen)
+- app/plant/[id].tsx (Plant Detail screen)
+
+MODIFICATIONS:
+- Replace TipsListSkeleton with actual AI tips
+- Add weather context display
+- Ensure loading states work properly
+- Maintain Thai language consistency
+
+VALIDATION: Tips display correctly, weather data shows, no UI errors
+
+STEP 4: Testing & Validation [2.5 hours after start - 30 minutes]
+----------------------------------------------------------------
+COMMAND: Final testing and verification
+
+TESTS REQUIRED:
+1. npx tsc --noEmit (zero TypeScript errors)
+2. Development server runs without errors
+3. Navigate through all screens
+4. Verify AI tips change with weather context
+5. Confirm Thai language displays properly
+
+VALIDATION: All acceptance criteria met
+
+📊 PROGRESS REPORTING:
+====================
+
+UPDATE FREQUENCY: Every 30 minutes
+REPORT TO: CODEX_STATUS_SPRINT2.log
+
+REQUIRED UPDATES:
+- Current step status
+- Completion percentage
+- Any blockers encountered
+- Next step timeline
+- Screenshots of working features
+
+🎯 SUCCESS CRITERIA:
+==================
+
+MUST ACHIEVE:
+✅ Zero TypeScript compilation errors
+✅ AI tips display on Home screen
+✅ Weather-aware tips on Plant Detail
+✅ Thai language throughout
+✅ Smooth loading states
+✅ No console errors during navigation
+
+📱 DEVELOPMENT SERVER:
+====================
+
+STATUS: Running on port 8082
+ACCESS: http://localhost:8082
+CONDITION: Ready for testing
+
+🔧 RESOURCES AVAILABLE:
+======================
+
+FOUNDATION FILES (DO NOT RECREATE):
+✅ services/WeatherService.ts - Use existing logic
+✅ services/RecommendationEngine.ts - Extend for tips
+✅ stores/weatherStore.ts - Use selectors
+✅ types/ai.ts - Complete type definitions
+✅ types/weather.ts - Interface specifications
+
+AGENT RESEARCH:
+📄 Agent 1 findings: Comprehensive AI foundation analysis
+📄 Agent 2 findings: Weather service integration requirements
+
+⚡ CODEX CLI: BEGIN EXECUTION IMMEDIATELY
+
+START WITH: Step 1 - Interface Harmonization
+TARGET: services/WeatherService.ts
+ACTION: Fix CurrentWeather interface alignment
+
+REPORT PROGRESS TO: CODEX_STATUS_SPRINT2.log
+
+---
+EXECUTION AUTHORIZED BY: Claude Code (PM)
+TIMESTAMP: 2025-09-17 07:48:45

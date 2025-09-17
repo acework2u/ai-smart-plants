@@ -1,14 +1,31 @@
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
+import { usePlantById } from '../../stores/garden';
+import { useAITips, useWeatherAI } from '../../hooks/useAI';
 
 export default function PlantDetailScreen() {
   const { id } = useLocalSearchParams();
+  const plantId = typeof id === 'string' ? id : Array.isArray(id) ? id[0] : '';
+  const plant = usePlantById(plantId);
+  const { tips, loading } = useAITips(plant?.name ?? '');
+  const { currentWeather, isLoading: weatherLoading } = useWeatherAI();
 
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.plantName}>Plant Details</Text>
-        <Text style={styles.plantId}>ID: {id}</Text>
+        <Text style={styles.plantName}>{plant?.name || 'Plant Details'}</Text>
+        <Text style={styles.plantId}>ID: {plantId}</Text>
+      </View>
+
+      <View style={styles.weatherSection}>
+        <Text style={styles.sectionTitle}>สภาพอากาศ</Text>
+        {weatherLoading || !currentWeather ? (
+          <Text style={styles.tip}>กำลังโหลดสภาพอากาศ...</Text>
+        ) : (
+          <Text style={styles.tip}>
+            {`อุณหภูมิ ${Math.round(currentWeather.temperature)}°C  •  ความชื้น ${Math.round(currentWeather.humidity)}%  •  ${currentWeather.conditionDescriptionThai || currentWeather.conditionDescription}`}
+          </Text>
+        )}
       </View>
 
       <View style={styles.statusSection}>
@@ -27,9 +44,25 @@ export default function PlantDetailScreen() {
 
       <View style={styles.tipsSection}>
         <Text style={styles.sectionTitle}>AI Tips</Text>
-        <Text style={styles.tip}>• Keep soil slightly moist but not soggy</Text>
-        <Text style={styles.tip}>• Rotate weekly for even growth</Text>
-        <Text style={styles.tip}>• Wipe leaves monthly for better light absorption</Text>
+        {loading && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8 }}>
+            <ActivityIndicator size="small" color="#16a34a" />
+            <Text style={[styles.tip, { marginLeft: 8 }]}>กำลังโหลดคำแนะนำ...</Text>
+          </View>
+        )}
+        {!loading && (tips?.length ?? 0) === 0 && (
+          <Text style={styles.tip}>ไม่มีคำแนะนำในขณะนี้</Text>
+        )}
+        {!loading && tips && tips.map((t) => (
+          <View key={t.id} style={{ marginBottom: 10 }}>
+            <Text style={[styles.tip, { fontWeight: '600', color: '#111827' }]}>
+              {(t.category === 'watering' && '💧') || (t.category === 'fertilizing' && '🌱') || (t.category === 'lighting' && '☀️') || '🍃'} {t.title}
+            </Text>
+            {!!t.description && (
+              <Text style={[styles.tip, { color: '#4b5563', marginTop: 2 }]}>{t.description}</Text>
+            )}
+          </View>
+        ))}
       </View>
     </ScrollView>
   );

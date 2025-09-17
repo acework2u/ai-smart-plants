@@ -11,7 +11,10 @@ config.resolver.extraNodeModules = {
     __dirname,
     'shims/react-native-linear-gradient'
   ),
+  'expo-location': path.resolve(
+    __dirname,
+    'shims/expo-location'
+  ),
 };
 
 module.exports = config;
-

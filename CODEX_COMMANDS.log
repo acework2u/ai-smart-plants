@@ -1,0 +1,91 @@
+=== SPRINT 1: CODEX CLI ASSIGNMENT ===
+Date: 2025-09-17
+Assigned by: Claude Code (Project Manager)
+
+COMMAND: Install and fix expo-linear-gradient
+CONTEXT: Sprint 1 - Fix Skeleton Loading & Gradient Issues
+PRIORITY: Critical
+PLATFORM: Mac OS M4
+
+STEP 1: Dependency Installation (30 min)
+----------------------------------------
+ACTION: Install expo-linear-gradient package
+COMMANDS:
+  1. npm install expo-linear-gradient
+  2. npx expo install expo-linear-gradient
+  3. Verify installation: npm list expo-linear-gradient
+
+EXPECTED_OUTPUT:
+  - expo-linear-gradient successfully installed
+  - No npm errors or warnings
+  - Package visible in node_modules
+
+VALIDATION:
+  - Check package.json contains expo-linear-gradient
+  - Verify no peer dependency issues
+
+---
+
+STEP 2: Fix SkeletonPlaceholder Component (1.5 hr)
+--------------------------------------------------
+ACTION: Update gradient imports and fix BVLinearGradient references
+TARGET_FILE: components/atoms/SkeletonPlaceholder.tsx
+
+CHANGES_REQUIRED:
+  FROM: import LinearGradient from 'react-native-linear-gradient';
+  TO:   import { LinearGradient } from 'expo-linear-gradient';
+
+  - Replace all BVLinearGradient references with LinearGradient
+  - Update animation props for expo compatibility
+  - Ensure M4 architecture compatibility
+
+EXPECTED_OUTPUT:
+  - No TypeScript errors in SkeletonPlaceholder.tsx
+  - Component compiles successfully
+  - Gradient animations render properly
+
+VALIDATION:
+  - Run: npx tsc --noEmit
+  - Check for console errors when component loads
+
+---
+
+STEP 3: Testing & Verification (1 hr)
+-------------------------------------
+ACTION: Test skeleton loading on all screens
+COMMANDS:
+  1. npx expo start --clear
+  2. Test on iOS Simulator (M4 optimized)
+  3. Navigate through all screens with loading states
+
+TEST_SCREENS:
+  - Home (/)
+  - Garden (/garden)
+  - Plant Detail (/plant/[id])
+  - Activity (/activity/[id])
+  - Notifications (/notifications)
+
+EXPECTED_OUTPUT:
+  - Smooth gradient animations on all screens
+  - No console errors or warnings
+  - Loading states display correctly
+
+VALIDATION:
+  - Screenshot evidence of working gradients
+  - Performance metrics (no lag on M4)
+
+---
+
+DELIVERABLES:
+1. ✅ expo-linear-gradient installed and configured
+2. ✅ SkeletonPlaceholder component fixed
+3. ✅ All loading states tested and working
+4. ✅ No TypeScript or runtime errors
+
+REPORT_BACK:
+- Update CODEX_STATUS.log with progress
+- Report any blockers to ERRORS.log
+- Confirm completion in SPRINT_STATUS.log
+
+---
+END OF ASSIGNMENT

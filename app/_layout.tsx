@@ -5,7 +5,7 @@ import { useFonts } from 'expo-font';
 import { Stack, usePathname, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -14,12 +14,16 @@ import { ThemeProvider } from '../contexts/ThemeContext';
 
 SplashScreen.preventAutoHideAsync();
 
+// Guard to ensure we only run onboarding navigation once per app session
+let didNavigateOnboarding = false;
+
 export default function RootLayout() {
   const [loaded] = useFonts({
     // Using system fonts for now - no custom fonts required
   });
   const pathname = usePathname();
   const router = useRouter();
+  const [navReady, setNavReady] = useState(false);
 
   useEffect(() => {
     if (loaded) {
@@ -28,8 +32,9 @@ export default function RootLayout() {
   }, [loaded]);
 
   // Unified initial route: show onboarding only on first run
+  const didNavigateRef = useRef(false);
   useEffect(() => {
-    if (!loaded) return;
+    if (!loaded || didNavigateRef.current || didNavigateOnboarding) return;
 
     const checkOnboarding = async () => {
       try {
@@ -37,25 +42,40 @@ export default function RootLayout() {
         const hasSeen = seen === 'true';
 
         if (!hasSeen && pathname !== '/simple-onboarding') {
+          didNavigateRef.current = true;
+          didNavigateOnboarding = true;
           router.replace('/simple-onboarding');
+          setNavReady(true);
           return;
         }
 
         if (hasSeen && pathname === '/simple-onboarding') {
+          didNavigateRef.current = true;
+          didNavigateOnboarding = true;
           router.replace('/(tabs)');
+          setNavReady(true);
+          return;
         }
+
+        // No redirect needed
+        didNavigateRef.current = true;
+        didNavigateOnboarding = true;
+        setNavReady(true);
       } catch (e) {
         // On error, fall back to showing home
+        didNavigateRef.current = true;
+        didNavigateOnboarding = true;
         if (pathname === '/simple-onboarding') {
           router.replace('/');
         }
+        setNavReady(true);
       }
     };
 
     checkOnboarding();
-  }, [loaded, pathname, router]);
+  }, [loaded]);
 
-  if (!loaded) {
+  if (!loaded || !navReady) {
     return null;
   }
 

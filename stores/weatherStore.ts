@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { shallow } from 'zustand/shallow';
 import { immer } from 'zustand/middleware/immer';
 import {
   CurrentWeather,
@@ -327,10 +328,15 @@ export const useWeatherError = () => useWeatherStore((state) => state.error);
 export const useWeatherLoading = () => useWeatherStore((state) => state.isLoading);
 export const usePlantCareImpacts = () => useWeatherStore((state) => state.plantCareImpacts);
 export const usePlantCareSuitability = () => useWeatherStore((state) => state.plantCareSuitability);
-export const useCurrentSeason = () => useWeatherStore((state) => ({
-  season: state.currentSeason,
-  seasonThai: state.seasonThai,
-}));
+// Prefer selecting individual fields to avoid returning new objects each render
+export const useSeasonValue = () => useWeatherStore((state) => state.currentSeason);
+export const useSeasonThai = () => useWeatherStore((state) => state.seasonThai);
+// Backward-compatible selector with shallow compare (avoid using in new code)
+export const useCurrentSeason = () =>
+  useWeatherStore(
+    (state) => ({ season: state.currentSeason, seasonThai: state.seasonThai }),
+    shallow
+  );
 
 // Action hooks
 export const useWeatherActions = () => useWeatherStore((state) => ({
@@ -360,7 +366,7 @@ export const useWeatherSummary = () => useWeatherStore((state) => {
     uvIndex: state.currentWeather.uvIndex,
     isGoodForPlants: state.plantCareSuitability?.suitable ?? false,
   };
-});
+}, shallow);
 
 export const useUrgentWeatherRecommendations = () => useWeatherStore((state) => {
   const urgentImpacts = state.plantCareImpacts.filter(

@@ -19,6 +19,7 @@ import { useGardenStore } from '../stores/garden';
 import { useTheme } from '../contexts/ThemeContext';
 import { typography, radius, getSpacing, themeUtils } from '../core/theme';
 import { initializeCore, errorUtils } from '../core';
+import { useAITips, useWeatherAI } from '../hooks/useAI';
 
 export default function HomeScreen() {
   const { plants } = useGardenStore();
@@ -27,6 +28,8 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(false);
   const [tipsLoading, setTipsLoading] = useState(true);
   const [plantsLoading, setPlantsLoading] = useState(true);
+  const { tips, loading: aiTipsLoading } = useAITips(undefined, 'th');
+  const { currentWeather, isLoading: weatherLoading, seasonThai } = useWeatherAI();
 
   // Initialize core services and load data on app start
   React.useEffect(() => {
@@ -36,14 +39,8 @@ export default function HomeScreen() {
         await initializeCore();
 
         // Simulate loading tips and plants data
-        const [tipsData, plantsData] = await Promise.all([
-          // Simulate AI tips loading
-          new Promise(resolve => setTimeout(resolve, 800)),
-          // Simulate plants data loading
-          new Promise(resolve => setTimeout(resolve, 600)),
-        ]);
-
-        setTipsLoading(false);
+        // Simulate only plants data loading (AI tips handled by hook)
+        await new Promise(resolve => setTimeout(resolve, 600));
         setPlantsLoading(false);
 
         // Set overall loading to false when both are done
@@ -61,28 +58,28 @@ export default function HomeScreen() {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    setTipsLoading(true);
     setPlantsLoading(true);
 
     try {
       // Simulate refreshing data
       await Promise.all([
-        // Refresh tips
-        new Promise(resolve => setTimeout(resolve, 1000)),
         // Refresh plants
         new Promise(resolve => setTimeout(resolve, 800)),
       ]);
 
-      setTipsLoading(false);
       setPlantsLoading(false);
     } catch (error) {
       console.error('Failed to refresh data:', error);
-      setTipsLoading(false);
       setPlantsLoading(false);
     } finally {
       setRefreshing(false);
     }
   };
+
+  // Keep tipsLoading in sync with AI tips hook
+  React.useEffect(() => {
+    setTipsLoading(aiTipsLoading);
+  }, [aiTipsLoading]);
 
   const handleCameraPress = () => {
     router.push('/camera');
@@ -186,26 +183,12 @@ export default function HomeScreen() {
     };
   };
 
-  const quickTips = [
-    {
-      id: '1',
-      title: 'เช้านี้ควรรดน้ำ',
-      description: 'อุณหภูมิ 32°C ความชื้น 65%',
-      icon: '💧',
-    },
-    {
-      id: '2',
-      title: 'ตรวจดูใบพืช',
-      description: 'ระวังโรคใบด่างในหน้าฝน',
-      icon: '🍃',
-    },
-    {
-      id: '3',
-      title: 'เวลาใส่ปุ๋ย',
-      description: 'NPK 15-15-15 ทุกสัปดาห์',
-      icon: '🌱',
-    },
-  ];
+  const renderedTips = (tips || []).map((t, idx) => ({
+    id: t.id || String(idx),
+    title: t.title,
+    description: t.description,
+    icon: t.category === 'watering' ? '💧' : t.category === 'fertilizing' ? '🌱' : t.category === 'lighting' ? '☀️' : '🍃',
+  }));
 
   const styles = createStyles(theme);
 
@@ -267,6 +250,27 @@ export default function HomeScreen() {
             </View>
           </Card>
 
+          {/* Weather Context */}
+          <Section
+            title="สภาพอากาศวันนี้"
+            subtitle={seasonThai ? `ฤดูกาล: ${seasonThai}` : undefined}
+            style={styles.section}
+          >
+            {weatherLoading || !currentWeather ? (
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <Skeleton width={80} height={20} borderRadius={6} />
+                <Skeleton width={60} height={20} borderRadius={6} />
+                <Skeleton width={120} height={20} borderRadius={6} />
+              </View>
+            ) : (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+                <Chip label={`อุณหภูมิ ${Math.round(currentWeather.temperature)}°C`} />
+                <Chip label={`ความชื้น ${Math.round(currentWeather.humidity)}%`} />
+                <Chip label={currentWeather.conditionDescriptionThai || currentWeather.conditionDescription} />
+              </View>
+            )}
+          </Section>
+
           {/* Quick Tips */}
           <Section
             title="เคล็ดลับวันนี้"
@@ -283,7 +287,7 @@ export default function HomeScreen() {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.tipsContainer}
               >
-                {quickTips.map((tip, index) => (
+                {renderedTips.map((tip, index) => (
                   <BounceButton key={tip.id} onPress={() => {}}>
                     <Card
                       style={[
