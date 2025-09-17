@@ -9,8 +9,6 @@ import {
   Alert,
   Dimensions,
 } from 'react-native';
-import { format, isToday, isYesterday, parseISO, differenceInDays } from 'date-fns';
-import { th } from 'date-fns/locale';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -50,6 +48,40 @@ interface ActivityHistoryProps {
 
 const { width } = Dimensions.get('window');
 
+const formatThaiDate = (date: Date) =>
+  new Intl.DateTimeFormat('th-TH', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+  }).format(date);
+
+const formatThaiTime = (date: Date) =>
+  new Intl.DateTimeFormat('th-TH', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(date);
+
+const toStartOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+const isSameDay = (a: Date, b: Date) => toStartOfDay(a).getTime() === toStartOfDay(b).getTime();
+
+const isTodayDate = (date: Date) => isSameDay(date, new Date());
+
+const isYesterdayDate = (date: Date) => {
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  return isSameDay(date, yesterday);
+};
+
+const parseISODate = (value: string) => new Date(value);
+
+const diffInDays = (left: Date, right: Date) => {
+  const diff = toStartOfDay(left).getTime() - toStartOfDay(right).getTime();
+  const dayMs = 24 * 60 * 60 * 1000;
+  return Math.round(diff / dayMs);
+};
+
 export const ActivityHistory: React.FC<ActivityHistoryProps> = ({
   activities,
   stats,
@@ -86,7 +118,7 @@ export const ActivityHistory: React.FC<ActivityHistoryProps> = ({
       const cutoffDate = new Date(now.getTime() - daysBack * 24 * 60 * 60 * 1000);
 
       filtered = filtered.filter(activity =>
-        parseISO(activity.dateISO) >= cutoffDate
+        parseISODate(activity.dateISO) >= cutoffDate
       );
     }
 
@@ -108,7 +140,7 @@ export const ActivityHistory: React.FC<ActivityHistoryProps> = ({
       if (filter.dateRange) {
         const { start, end } = filter.dateRange;
         filtered = filtered.filter(activity => {
-          const activityDate = parseISO(activity.dateISO);
+          const activityDate = parseISODate(activity.dateISO);
           return activityDate >= start && activityDate <= end;
         });
       }
@@ -137,15 +169,15 @@ export const ActivityHistory: React.FC<ActivityHistoryProps> = ({
     const groups: Record<string, ActivityEntry[]> = {};
 
     filteredActivities.forEach(activity => {
-      const date = parseISO(activity.dateISO);
+      const date = parseISODate(activity.dateISO);
       let dateKey: string;
 
-      if (isToday(date)) {
+      if (isTodayDate(date)) {
         dateKey = 'วันนี้';
-      } else if (isYesterday(date)) {
+      } else if (isYesterdayDate(date)) {
         dateKey = 'เมื่อวาน';
       } else {
-        dateKey = format(date, 'dd MMMM yyyy', { locale: th });
+        dateKey = formatThaiDate(date);
       }
 
       if (!groups[dateKey]) {
@@ -243,9 +275,9 @@ export const ActivityHistory: React.FC<ActivityHistoryProps> = ({
 
   // Render activity item
   const renderActivityItem = (activity: ActivityEntry) => {
-    const activityDate = parseISO(activity.dateISO);
-    const timeString = activity.time24 || format(activityDate, 'HH:mm');
-    const daysAgo = differenceInDays(new Date(), activityDate);
+    const activityDate = parseISODate(activity.dateISO);
+    const timeString = activity.time24 || formatThaiTime(activityDate);
+    const daysAgo = diffInDays(new Date(), activityDate);
 
     return (
       <TouchableOpacity

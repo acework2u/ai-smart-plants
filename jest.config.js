@@ -16,6 +16,7 @@ module.exports = {
     '^@services/(.*)$': '<rootDir>/services/$1',
     '^@types/(.*)$': '<rootDir>/types/$1',
     '^@core/(.*)$': '<rootDir>/core/$1',
+    '^expo-location$': '<rootDir>/shims/expo-location/index.js',
   },
   collectCoverageFrom: [
     'stores/**/*.{ts,tsx}',

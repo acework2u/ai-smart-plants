@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import {
   View,
   Text,
@@ -8,12 +8,7 @@ import {
   Modal,
   Dimensions,
 } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withSequence,
-} from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring, withSequence } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 
 import {
@@ -58,6 +53,64 @@ interface QuickActionsProps {
 
 const { width } = Dimensions.get('window');
 
+interface QuickActionButtonProps {
+  action: QuickAction;
+  isExecuting: boolean;
+  isActive: boolean;
+  onPress: (action: QuickAction) => void;
+}
+
+const QuickActionButton = memo(({ action, isExecuting, isActive, onPress }: QuickActionButtonProps) => {
+  const scale = useSharedValue(1);
+
+  useEffect(() => {
+    if (!isExecuting) {
+      scale.value = withSpring(1, { duration: 120 });
+    }
+  }, [isExecuting, scale]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const handlePress = () => {
+    if (isExecuting) return;
+
+    scale.value = withSequence(
+      withSpring(0.9, { duration: 100 }),
+      withSpring(1, { duration: 100 })
+    );
+
+    onPress(action);
+  };
+
+  return (
+    <Animated.View key={action.id} style={[animatedStyle]}>
+      <TouchableOpacity
+        style={[
+          styles.quickActionButton,
+          { borderColor: action.color + '30' },
+          isActive && styles.quickActionButtonExecuting,
+        ]}
+        onPress={handlePress}
+        disabled={isExecuting}
+      >
+        <View style={[styles.quickActionIcon, { backgroundColor: action.color + '20' }]}>
+          <Text style={styles.quickActionIconText}>{action.icon}</Text>
+        </View>
+        <Text style={styles.quickActionName} numberOfLines={2}>
+          {action.name}
+        </Text>
+        {action.shortcut && (
+          <Text style={styles.quickActionShortcut}>{action.shortcut}</Text>
+        )}
+      </TouchableOpacity>
+    </Animated.View>
+  );
+});
+
+QuickActionButton.displayName = 'QuickActionButton';
+
 export const QuickActions: React.FC<QuickActionsProps> = ({
   plantId,
   plantName,
@@ -74,9 +127,6 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
   const [executingActionId, setExecutingActionId] = useState<string | null>(null);
   const [showCustomizeModal, setShowCustomizeModal] = useState(false);
   const [availableActions, setAvailableActions] = useState<QuickAction[]>([]);
-
-  // Animation values
-  const actionScale = useSharedValue(1);
 
   // Default quick actions based on plant preferences and common activities
   const defaultActions: QuickAction[] = [
@@ -184,12 +234,6 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
     setIsExecuting(true);
     setExecutingActionId(action.id);
 
-    // Animation feedback
-    actionScale.value = withSequence(
-      withSpring(0.9, { duration: 100 }),
-      withSpring(1, { duration: 100 })
-    );
-
     try {
       const activity: CreateActivityInput = {
         plantId,
@@ -228,42 +272,6 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
     setShowCustomizeModal(true);
   };
 
-  // Render quick action button
-  const renderQuickAction = (action: QuickAction) => {
-    const isExecutingThis = executingActionId === action.id;
-
-    const animatedStyle = useAnimatedStyle(() => ({
-      transform: [{ scale: isExecutingThis ? actionScale.value : 1 }],
-    }));
-
-    return (
-      <Animated.View key={action.id} style={[animatedStyle]}>
-        <TouchableOpacity
-          style={[
-            styles.quickActionButton,
-            { borderColor: action.color + '30' },
-            isExecutingThis && styles.quickActionButtonExecuting,
-          ]}
-          onPress={() => handleQuickAction(action)}
-          disabled={isExecuting}
-        >
-          <View style={[
-            styles.quickActionIcon,
-            { backgroundColor: action.color + '20' }
-          ]}>
-            <Text style={styles.quickActionIconText}>{action.icon}</Text>
-          </View>
-          <Text style={styles.quickActionName} numberOfLines={2}>
-            {action.name}
-          </Text>
-          {action.shortcut && (
-            <Text style={styles.quickActionShortcut}>{action.shortcut}</Text>
-          )}
-        </TouchableOpacity>
-      </Animated.View>
-    );
-  };
-
   // Render action grid
   const renderActionGrid = (actions: QuickAction[], title?: string) => (
     <View style={styles.actionGrid}>
@@ -272,7 +280,15 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
         styles.actionsContainer,
         horizontal && styles.actionsContainerHorizontal
       ]}>
-        {actions.map(renderQuickAction)}
+        {actions.map(action => (
+          <QuickActionButton
+            key={action.id}
+            action={action}
+            isExecuting={isExecuting}
+            isActive={executingActionId === action.id}
+            onPress={handleQuickAction}
+          />
+        ))}
       </View>
     </View>
   );
@@ -301,16 +317,24 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
         </View>
 
         {horizontal ? (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.horizontalContainer}
-          >
-            {visibleActions.map(renderQuickAction)}
-          </ScrollView>
-        ) : (
-          renderActionGrid(visibleActions)
-        )}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.horizontalContainer}
+        >
+          {visibleActions.map(action => (
+            <QuickActionButton
+              key={action.id}
+              action={action}
+              isExecuting={isExecuting}
+              isActive={executingActionId === action.id}
+              onPress={handleQuickAction}
+            />
+          ))}
+        </ScrollView>
+      ) : (
+        renderActionGrid(visibleActions)
+      )}
       </Card>
 
       {/* Customize Modal */}

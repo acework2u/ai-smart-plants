@@ -61,5 +61,5 @@ STATUS: Completed @ 2025-09-17 09:42
 NOTE: Home + plant detail screens render generated AI tips with Thai copy
 
 STEP 4: Testing & Validation (AI Tips + Weather)
-STATUS: Pending
-NOTE: Awaiting end-to-end validation pass on simulator and typecheck
+STATUS: Completed @ 2025-09-17 10:26
+NOTE: `npm run lint` passes with only legacy warnings; Jest runs via `USE_WATCHMAN=0 npm test -- --watch=false --watchman=false --runInBand` after updating setup (removed native animated mock, mapped expo-location, refreshed store tests, switched to react-native-worklets plugin).

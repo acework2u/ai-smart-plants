@@ -98,7 +98,7 @@ export default function GardenScreen() {
     <View style={styles.emptyContainer}>
       <View style={styles.emptyState}>
         <Leaf size={64} color={colors.gray[400]} />
-        <Text style={styles.emptyTitle}>"เริ่มต้นสร้างสวน"</Text>
+        <Text style={styles.emptyTitle}>เริ่มต้นสร้างสวน</Text>
         <Text style={styles.emptySubtitle}>
           เพิ่มต้นไม้แรกของคุณเพื่อเริ่มต้นการดูแล
         </Text>

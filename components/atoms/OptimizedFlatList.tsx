@@ -26,10 +26,10 @@ interface OptimizedFlatListProps<T> extends Omit<FlatListProps<T>, 'renderItem'>
 }
 
 // Memoized empty state component
-const DefaultEmptyComponent: React.FC<{
+const DefaultEmptyComponentBase: React.FC<{
   title?: string;
   subtitle?: string;
-}> = memo(({ title = 'No items', subtitle = 'Nothing to display' }) => {
+}> = ({ title = 'No items', subtitle = 'Nothing to display' }) => {
   const { theme } = useTheme();
 
   return (
@@ -65,7 +65,10 @@ const DefaultEmptyComponent: React.FC<{
       </Text>
     </View>
   );
-});
+};
+
+const DefaultEmptyComponent = memo(DefaultEmptyComponentBase);
+DefaultEmptyComponent.displayName = 'DefaultEmptyComponent';
 
 function OptimizedFlatListComponent<T>({
   data,
@@ -204,7 +207,7 @@ export const OptimizedFlatList = memo(OptimizedFlatListComponent) as <T>(
 // Specialized components for common use cases
 
 // Plant list optimized for garden display
-export const OptimizedPlantList = memo(<T,>({
+const OptimizedPlantListComponent = <T,>({
   plants,
   onPlantPress,
   ...otherProps
@@ -230,10 +233,9 @@ export const OptimizedPlantList = memo(<T,>({
       {...otherProps}
     />
   );
-});
+};
 
-// Activity list optimized for activity feed
-export const OptimizedActivityList = memo(<T,>({
+const OptimizedActivityListComponent = <T,>({
   activities,
   onActivityPress,
   ...otherProps
@@ -259,10 +261,9 @@ export const OptimizedActivityList = memo(<T,>({
       {...otherProps}
     />
   );
-});
+};
 
-// Notification list optimized for notification display
-export const OptimizedNotificationList = memo(<T,>({
+const OptimizedNotificationListComponent = <T,>({
   notifications,
   onNotificationPress,
   ...otherProps
@@ -288,6 +289,14 @@ export const OptimizedNotificationList = memo(<T,>({
       {...otherProps}
     />
   );
-});
+};
+
+export const OptimizedPlantList = memo(OptimizedPlantListComponent) as typeof OptimizedPlantListComponent;
+export const OptimizedActivityList = memo(OptimizedActivityListComponent) as typeof OptimizedActivityListComponent;
+export const OptimizedNotificationList = memo(OptimizedNotificationListComponent) as typeof OptimizedNotificationListComponent;
+
+(OptimizedPlantList as unknown as { displayName?: string }).displayName = 'OptimizedPlantList';
+(OptimizedActivityList as unknown as { displayName?: string }).displayName = 'OptimizedActivityList';
+(OptimizedNotificationList as unknown as { displayName?: string }).displayName = 'OptimizedNotificationList';
 
 export default OptimizedFlatList;

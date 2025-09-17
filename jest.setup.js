@@ -1,13 +1,9 @@
 import 'react-native-gesture-handler/jestSetup';
-import '@testing-library/react-native/extend-expect';
 
 // Mock AsyncStorage
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock')
 );
-
-// Mock react-native modules
-jest.mock('react-native/Libraries/Animated/NativeAnimatedHelper');
 
 // Mock expo modules
 jest.mock('expo-notifications', () => ({
