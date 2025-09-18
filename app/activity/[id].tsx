@@ -1,15 +1,78 @@
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityKind, CreateActivityInput, NPK, Unit, formatQuantityWithUnit } from '@/types/activity';
+import { useActivityStore } from '@/stores/activity';
+import { usePrefsStore } from '@/stores/prefsStore';
 
 export default function ActivityLogScreen() {
   const { id } = useLocalSearchParams();
-  const [selectedActivity, setSelectedActivity] = useState('รดน้ำ');
+  const plantId = useMemo(() => {
+    if (Array.isArray(id)) {
+      return id[0] ?? '';
+    }
+    return typeof id === 'string' ? id : '';
+  }, [id]);
+
+  const addActivity = useActivityStore((state) => state.addActivity);
+  const activityHistory = useActivityStore((state) =>
+    plantId ? state.activities[plantId] || [] : []
+  );
+
+  const [selectedActivity, setSelectedActivity] = useState<ActivityKind>('รดน้ำ');
   const [quantity, setQuantity] = useState('');
   const [unit, setUnit] = useState('ml');
+  const [npk, setNpk] = useState<NPK>({ n: '', p: '', k: '' });
+  const prefsInitializedRef = useRef(false);
 
-  const activities = ['รดน้ำ', 'ใส่ปุ๋ย', 'พ่นยา', 'ย้ายกระถาง', 'ตรวจใบ'];
-  const units = ['ml', 'g', 'pcs', 'ล.'];
+  const activities: ActivityKind[] = ['รดน้ำ', 'ใส่ปุ๋ย', 'พ่นยา', 'ย้ายกระถาง', 'ตรวจใบ'];
+  const units: Unit[] = ['ml', 'g', 'pcs', 'ล.'];
+
+  useEffect(() => {
+    if (!plantId || prefsInitializedRef.current) {
+      return;
+    }
+
+    const prefs = usePrefsStore.getState().getPlantPrefs(plantId);
+    if (prefs) {
+      if (prefs.lastKind) setSelectedActivity(prefs.lastKind);
+      if (prefs.lastUnit) setUnit(prefs.lastUnit);
+      if (prefs.lastQty) setQuantity(prefs.lastQty);
+      if (prefs.lastNPK && prefs.lastKind === 'ใส่ปุ๋ย') {
+        setNpk(prefs.lastNPK);
+      }
+    }
+
+    prefsInitializedRef.current = true;
+  }, [plantId]);
+
+  useEffect(() => {
+    if (selectedActivity !== 'ใส่ปุ๋ย') {
+      setNpk({ n: '', p: '', k: '' });
+    }
+  }, [selectedActivity]);
+
+  const sanitizeNumeric = (value: string) => value.replace(/[^0-9.]/g, '');
+
+  const handleSave = () => {
+    if (!plantId) {
+      console.warn('No plantId provided for activity logging');
+      return;
+    }
+
+    const now = new Date();
+    const entry: CreateActivityInput = {
+      plantId,
+      kind: selectedActivity,
+      unit,
+      dateISO: now.toISOString(),
+      time24: now.toTimeString().slice(0, 5),
+      ...(quantity ? { quantity } : {}),
+      ...(selectedActivity === 'ใส่ปุ๋ย' ? { npk } : {}),
+    };
+
+    addActivity(entry);
+  };
 
   return (
     <ScrollView style={styles.container}>
@@ -72,29 +135,44 @@ export default function ActivityLogScreen() {
         </View>
 
         {selectedActivity === 'ใส่ปุ๋ย' && (
-          <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>NPK Values</Text>
+          <View style={[styles.fieldGroup, styles.npkContainer]}>
+            <Text style={styles.npkLabel}>ค่า NPK (%)</Text>
             <View style={styles.npkRow}>
               <TextInput
                 style={styles.npkInput}
                 placeholder="N"
+                value={npk.n}
+                onChangeText={(value) =>
+                  setNpk((prev) => ({ ...prev, n: sanitizeNumeric(value) }))
+                }
                 keyboardType="numeric"
+                maxLength={3}
               />
               <TextInput
                 style={styles.npkInput}
                 placeholder="P"
+                value={npk.p}
+                onChangeText={(value) =>
+                  setNpk((prev) => ({ ...prev, p: sanitizeNumeric(value) }))
+                }
                 keyboardType="numeric"
+                maxLength={3}
               />
               <TextInput
                 style={styles.npkInput}
                 placeholder="K"
+                value={npk.k}
+                onChangeText={(value) =>
+                  setNpk((prev) => ({ ...prev, k: sanitizeNumeric(value) }))
+                }
                 keyboardType="numeric"
+                maxLength={3}
               />
             </View>
           </View>
         )}
 
-        <TouchableOpacity style={styles.logButton}>
+        <TouchableOpacity style={styles.logButton} onPress={handleSave}>
           <Text style={styles.logButtonText}>Log Activity</Text>
         </TouchableOpacity>
       </View>
@@ -102,9 +180,32 @@ export default function ActivityLogScreen() {
       <View style={styles.historySection}>
         <Text style={styles.sectionTitle}>Recent Activities</Text>
         <View style={styles.activityHistory}>
-          <Text style={styles.historyItem}>💧 Watered 200ml - 2 days ago</Text>
-          <Text style={styles.historyItem}>🌱 Fertilized NPK 10-10-10 - 1 week ago</Text>
-          <Text style={styles.historyItem}>🔍 Leaf inspection - 3 days ago</Text>
+          {!plantId && (
+            <Text style={styles.historyEmpty}>ต้องระบุต้นไม้ก่อนบันทึกกิจกรรม</Text>
+          )}
+          {plantId && activityHistory.length === 0 && (
+            <Text style={styles.historyEmpty}>ยังไม่มีประวัติการดูแล</Text>
+          )}
+          {plantId &&
+            activityHistory.map((activity) => {
+              const amount = formatQuantityWithUnit(activity.quantity, activity.unit);
+              const npkLabel = activity.npk
+                ? ` • NPK ${activity.npk.n}-${activity.npk.p}-${activity.npk.k}`
+                : '';
+              const timestamp = activity.time24
+                ? `${activity.dateISO.slice(0, 10)} ${activity.time24}`
+                : activity.dateISO.slice(0, 10);
+
+              return (
+                <View key={activity.id} style={styles.historyCard}>
+                  <Text style={styles.historyTitle}>{activity.kind}</Text>
+                  <Text style={styles.historySubtitle}>
+                    {amount || 'ไม่ระบุปริมาณ'}{npkLabel}
+                  </Text>
+                  <Text style={styles.historyTimestamp}>{timestamp}</Text>
+                </View>
+              );
+            })}
         </View>
       </View>
     </ScrollView>
@@ -195,6 +296,17 @@ const styles = StyleSheet.create({
   unitButtonTextActive: {
     color: '#fff',
   },
+  npkContainer: {
+    padding: 16,
+    backgroundColor: '#f9fafb',
+    borderRadius: 12,
+  },
+  npkLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
+  },
   npkRow: {
     flexDirection: 'row',
     gap: 8,
@@ -208,6 +320,32 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 16,
     textAlign: 'center',
+  },
+  historyCard: {
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: '#f9fafb',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  historyTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  historySubtitle: {
+    marginTop: 4,
+    fontSize: 14,
+    color: '#374151',
+  },
+  historyTimestamp: {
+    marginTop: 6,
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  historyEmpty: {
+    fontSize: 14,
+    color: '#6b7280',
   },
   logButton: {
     backgroundColor: '#16a34a',

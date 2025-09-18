@@ -124,6 +124,7 @@ export const STORAGE_KEYS = {
   NOTIFICATIONS: '@spa/notifications',
   ONBOARDING_SEEN: '@spa/onboardingSeen',
   NOTIFICATION_FILTER: '@spa/notiFilter',
+  PLANT_PREFS: '@spa/plantPrefs',
   USER_PREFERENCES: '@spa/userPrefs',
   PLANT_PREFS_PREFIX: '@spa/plantPrefs:',
   ANALYSIS_CACHE: '@spa/analysisCache',

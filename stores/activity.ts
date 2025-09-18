@@ -168,7 +168,7 @@ export const useActivityStore = create<ActivityState & ActivityActions>()(
       // Integration with preferences store
       updateLastActivityPrefs: (plantId, activity) => {
         // Import preferences store dynamically to avoid circular dependency
-        const { usePreferencesStore } = require('./preferences');
+        const { usePrefsStore } = require('./prefsStore');
 
         const prefs: Partial<PlantPrefs> = {
           lastKind: activity.kind,
@@ -180,7 +180,7 @@ export const useActivityStore = create<ActivityState & ActivityActions>()(
           prefs.lastNPK = activity.npk;
         }
 
-        usePreferencesStore.getState().setPlantPrefs(plantId, prefs);
+        usePrefsStore.getState().updatePlantPrefs(plantId, prefs);
       },
 
       // Filtering and search

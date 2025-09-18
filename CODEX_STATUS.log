@@ -63,3 +63,22 @@ NOTE: Home + plant detail screens render generated AI tips with Thai copy
 STEP 4: Testing & Validation (AI Tips + Weather)
 STATUS: Completed @ 2025-09-17 10:26
 NOTE: `npm run lint` passes with only legacy warnings; Jest runs via `USE_WATCHMAN=0 npm test -- --watch=false --watchman=false --runInBand` after updating setup (removed native animated mock, mapped expo-location, refreshed store tests, switched to react-native-worklets plugin).
+STATUS: Completed
+CURRENT_TASK: Sprint 3 - NPK + prefs integration delivered
+COMPLETION: 100%
+NEXT_STEP: QA agent to validate on simulator (per plan)
+TIME: 16:27
+---
+STATUS: In Progress
+CURRENT_TASK: Sprint 3 QA validation (Agent Vega)
+COMPLETION: 0%
+NEXT_STEP: Execute QA test plan + report findings
+TIME: 16:32
+---
+=== QA PROGRESS REPORT ===
+TIME: 16:39
+STATUS: In Progress
+CURRENT_TASK: Agent Vega executing Sprint 3 QA suite (13 cases)
+DETAILS: Following SPRINT3_QA_TEST_PLAN.md (NPK UI, persistence, prefill, edge cases)
+NEXT_STEP: Document results, capture evidence
+---

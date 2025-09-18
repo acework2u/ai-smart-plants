@@ -1,5 +1,5 @@
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { usePlantById } from '../../stores/garden';
 import { useAITips, useWeatherAI } from '../../hooks/useAI';
 
@@ -9,6 +9,12 @@ export default function PlantDetailScreen() {
   const plant = usePlantById(plantId);
   const { tips, loading } = useAITips(plant?.name ?? '');
   const { currentWeather, isLoading: weatherLoading } = useWeatherAI();
+  const router = useRouter();
+
+  const handleLogActivityPress = () => {
+    if (!plantId) return;
+    router.push(`/activity/${plantId}`);
+  };
 
   return (
     <ScrollView style={styles.container}>
@@ -33,6 +39,9 @@ export default function PlantDetailScreen() {
         <View style={styles.statusChip}>
           <Text style={styles.statusText}>Healthy</Text>
         </View>
+        <TouchableOpacity style={styles.logButton} onPress={handleLogActivityPress}>
+          <Text style={styles.logButtonText}>บันทึกการดูแล</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.careSection}>
@@ -107,6 +116,18 @@ const styles = StyleSheet.create({
   },
   statusText: {
     color: '#16a34a',
+    fontWeight: '600',
+  },
+  logButton: {
+    marginTop: 16,
+    backgroundColor: '#16a34a',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  logButtonText: {
+    color: '#fff',
+    fontSize: 16,
     fontWeight: '600',
   },
   careSection: {
