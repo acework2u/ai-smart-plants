@@ -12,8 +12,15 @@ export default function PlantDetailScreen() {
   const router = useRouter();
 
   const handleLogActivityPress = () => {
-    if (!plantId) return;
-    router.push(`/activity/${plantId}`);
+    if (!plantId) {
+      console.warn('No plant ID available');
+      // return;
+    }else{
+      console.log('Navigating to activity log for plant ID:', plantId);
+      router.push(`/activity/${plantId}`);
+    }
+    // if (!plantId) return;
+    // router.push(`/activity/${plantId}`);
   };
 
   return (
@@ -96,6 +103,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     marginTop: 4,
+  },
+  weatherSection: {
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
   },
   statusSection: {
     padding: 20,

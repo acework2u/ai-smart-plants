@@ -168,19 +168,23 @@ export const useActivityStore = create<ActivityState & ActivityActions>()(
       // Integration with preferences store
       updateLastActivityPrefs: (plantId, activity) => {
         // Import preferences store dynamically to avoid circular dependency
-        const { usePrefsStore } = require('./prefsStore');
+        try {
+          const { usePrefsStore } = require('./prefsStore');
 
-        const prefs: Partial<PlantPrefs> = {
-          lastKind: activity.kind,
-          lastUnit: activity.unit,
-          lastQty: activity.quantity,
-        };
+          const prefs: Partial<PlantPrefs> = {
+            lastKind: activity.kind,
+            lastUnit: activity.unit,
+            lastQty: activity.quantity,
+          };
 
-        if (activity.npk) {
-          prefs.lastNPK = activity.npk;
+          if (activity.npk) {
+            prefs.lastNPK = activity.npk;
+          }
+
+          usePrefsStore.getState().updatePlantPrefs(plantId, prefs);
+        } catch (error) {
+          console.warn('Failed to update plant preferences:', error);
         }
-
-        usePrefsStore.getState().updatePlantPrefs(plantId, prefs);
       },
 
       // Filtering and search
@@ -344,11 +348,15 @@ export const useActivityStore = create<ActivityState & ActivityActions>()(
   )
 );
 
+// Stable empty array to prevent re-renders
+const EMPTY_ACTIVITIES: ActivityEntry[] = [];
+
 // Optimized selectors
 export const usePlantActivities = (plantId: string | null) => {
-  return useActivityStore((state) =>
-    plantId ? state.activities[plantId] || [] : []
-  );
+  return useActivityStore((state) => {
+    if (!plantId) return EMPTY_ACTIVITIES;
+    return state.activities[plantId] ?? EMPTY_ACTIVITIES;
+  });
 };
 
 // Note: Plant preferences moved to preferences store

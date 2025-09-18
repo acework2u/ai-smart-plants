@@ -1,9 +1,11 @@
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { ActivityKind, CreateActivityInput, NPK, Unit, formatQuantityWithUnit } from '@/types/activity';
-import { useActivityStore } from '@/stores/activity';
+import { useActivityStore, usePlantActivities } from '@/stores/activity';
 import { usePrefsStore } from '@/stores/prefsStore';
+
+const EMPTY_NPK: NPK = { n: '', p: '', k: '' };
 
 export default function ActivityLogScreen() {
   const { id } = useLocalSearchParams();
@@ -15,14 +17,12 @@ export default function ActivityLogScreen() {
   }, [id]);
 
   const addActivity = useActivityStore((state) => state.addActivity);
-  const activityHistory = useActivityStore((state) =>
-    plantId ? state.activities[plantId] || [] : []
-  );
+  const activityHistory = usePlantActivities(plantId);
 
   const [selectedActivity, setSelectedActivity] = useState<ActivityKind>('รดน้ำ');
   const [quantity, setQuantity] = useState('');
   const [unit, setUnit] = useState('ml');
-  const [npk, setNpk] = useState<NPK>({ n: '', p: '', k: '' });
+  const [npk, setNpk] = useState<NPK>(EMPTY_NPK);
   const prefsInitializedRef = useRef(false);
 
   const activities: ActivityKind[] = ['รดน้ำ', 'ใส่ปุ๋ย', 'พ่นยา', 'ย้ายกระถาง', 'ตรวจใบ'];
@@ -48,13 +48,13 @@ export default function ActivityLogScreen() {
 
   useEffect(() => {
     if (selectedActivity !== 'ใส่ปุ๋ย') {
-      setNpk({ n: '', p: '', k: '' });
+      setNpk(EMPTY_NPK);
     }
   }, [selectedActivity]);
 
   const sanitizeNumeric = (value: string) => value.replace(/[^0-9.]/g, '');
 
-  const handleSave = () => {
+  const handleSave = useCallback(() => {
     if (!plantId) {
       console.warn('No plantId provided for activity logging');
       return;
@@ -64,15 +64,16 @@ export default function ActivityLogScreen() {
     const entry: CreateActivityInput = {
       plantId,
       kind: selectedActivity,
-      unit,
+      unit: unit as Unit,
       dateISO: now.toISOString(),
       time24: now.toTimeString().slice(0, 5),
+      source: 'user',
       ...(quantity ? { quantity } : {}),
       ...(selectedActivity === 'ใส่ปุ๋ย' ? { npk } : {}),
     };
 
     addActivity(entry);
-  };
+  }, [plantId, selectedActivity, unit, quantity, npk, addActivity]);
 
   return (
     <ScrollView style={styles.container}>
