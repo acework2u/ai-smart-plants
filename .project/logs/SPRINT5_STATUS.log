@@ -4,3 +4,4 @@ Sprint Goal: Complete Profile/Settings and Insights/Analytics features
 Duration: 10 days
 Status: ACTIVE
 ===============================================
+[2025-09-19T12:45+07] Codex: Removed legacy explore/garden_fixed tabs, rebuilt Insights screen UX (hero/KPI/activity/task/health/AI/micro-climate/quick facts), adjusted spacing + shadows for polished mobile presentation. Awaiting Claude review.
