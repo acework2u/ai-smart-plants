@@ -1,9 +1,9 @@
-import React, { useCallback, useMemo } from 'react';
 import { Tabs } from 'expo-router';
+import { BarChart3, Home, Leaf, Settings } from 'lucide-react-native';
+import React, { useCallback, useMemo } from 'react';
 import { Platform } from 'react-native';
-import { Home, Leaf, BarChart3, Settings } from 'lucide-react-native';
-import { colors, getSpacing } from '../../core/theme';
 import { hapticService } from '../../core/haptics';
+import { colors, getSpacing } from '../../core/theme';
 
 function TabLayoutInner() {
   const handleTabPress = useCallback(() => {

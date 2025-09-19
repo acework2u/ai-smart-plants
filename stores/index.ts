@@ -4,6 +4,8 @@ export * from './activity';
 export * from './notifications';
 export * from './preferences';
 export * from './analysis';
+export * from './userStore';
+export * from './insightsStore';
 
 // Store utilities and helpers
 import { useGardenStore } from './garden';
@@ -12,6 +14,8 @@ import { useActivityStore } from './activity';
 import { useNotificationStore } from './notifications';
 import { usePreferencesStore } from './preferences';
 import { useAnalysisStore } from './analysis';
+import { useUserStore } from './userStore';
+import { useInsightsStore, initializeInsightsStore, cleanupInsightsStore } from './insightsStore';
 
 // Combined store actions for complex operations
 export const combinedActions = {
@@ -23,6 +27,12 @@ export const combinedActions = {
       useNotificationStore.getState().calculateStats(),
       useAnalysisStore.getState().cleanupOldCache(),
     ]);
+
+    // Initialize insights store with background tasks and cache warmup
+    initializeInsightsStore();
+
+    // Update user last seen
+    useUserStore.getState().updateLastSeen();
   },
 
   // Add plant with initial activity
@@ -32,12 +42,24 @@ export const combinedActions = {
 
     useGardenStore.getState().addPlant(plantData);
 
+    // Update user statistics
+    useUserStore.getState().incrementPlantCount();
+
     if (initialActivity) {
       useActivityStore.getState().addActivity({
         ...initialActivity,
         plantId: plantId,
       });
+
+      // This will automatically increment activity count via the activity store
+      useUserStore.getState().incrementActivityCount();
+
+      // Update insights store dependency for activity data
+      useInsightsStore.getState().updateDependency('activityData');
     }
+
+    // Update insights store dependency for plant data
+    useInsightsStore.getState().updateDependency('plantData');
 
     return plantId;
   },
@@ -61,6 +83,18 @@ export const combinedActions = {
         status: analysis.healthStatus,
         imageUrl: imageUri,
       }, analysis.analysisId);
+
+      // Update user statistics
+      useUserStore.getState().incrementPlantCount();
+
+      // Award achievement for using AI scanning
+      useUserStore.getState().addAchievement({
+        name: 'AI Scanner',
+        description: 'Used AI to identify a plant',
+        icon: '🤖',
+        category: 'achievement',
+        rarity: 'common',
+      });
 
       // Create AI tip notifications
       if (analysis.urgentActions && analysis.urgentActions.length > 0) {
@@ -122,15 +156,25 @@ export const combinedActions = {
     // Remove plant-specific notifications
     const notifications = useNotificationStore.getState().getNotificationsByPlant(plantId);
     notifications.forEach(n => useNotificationStore.getState().deleteNotification(n.id));
+
+    // Clear plant-specific insights cache
+    useInsightsStore.getState().clearCache(plantId);
+    useInsightsStore.getState().updateDependency('plantData');
+    useInsightsStore.getState().updateDependency('activityData');
   },
 
   // Reset all stores
   resetAllStores: () => {
+    // Clean up insights store background tasks first
+    cleanupInsightsStore();
+
     useGardenStore.getState().reset();
     useActivityStore.getState().reset();
     useNotificationStore.getState().reset();
     usePreferencesStore.getState().reset();
     useAnalysisStore.getState().reset();
+    useUserStore.getState().reset();
+    useInsightsStore.getState().reset();
   },
 
   // Export all data
@@ -141,9 +185,10 @@ export const combinedActions = {
     const plantPrefs = usePreferencesStore.getState().plantPrefs;
     const userPrefs = usePreferencesStore.getState().userPrefs;
     const analysisHistory = useAnalysisStore.getState().analysisHistory;
+    const userData = useUserStore.getState().exportUserData();
 
     return {
-      version: '2.0.0',
+      version: '2.1.0',
       exportDate: new Date().toISOString(),
       data: {
         gardens,
@@ -152,6 +197,7 @@ export const combinedActions = {
         plantPrefs,
         userPrefs,
         analysisHistory: analysisHistory.slice(0, 20), // Only recent analysis
+        user: userData,
       },
     };
   },
@@ -195,6 +241,11 @@ export const combinedActions = {
         data.data.analysisHistory.forEach((analysis: any) => {
           useAnalysisStore.getState().saveAnalysisResult(analysis);
         });
+      }
+
+      // Import user data
+      if (data.data.user) {
+        useUserStore.getState().importUserData(data.data.user);
       }
 
       return { success: true };
@@ -267,12 +318,44 @@ export const storeHealthCheck = {
     };
   },
 
+  checkUserStore: () => {
+    const state = useUserStore.getState();
+    return {
+      hasUser: !!state.user,
+      isInitialized: state.isInitialized,
+      badgesCount: state.user?.badges.length || 0,
+      milestonesCount: state.user?.milestones.length || 0,
+      expertLevel: state.user?.statistics.expertLevel || 'Unknown',
+      hasError: !!state.error,
+      lastUpdated: state.lastUpdated,
+      isHealthy: !state.error && state.isInitialized,
+    };
+  },
+
+  checkInsightsStore: () => {
+    const state = useInsightsStore.getState();
+    const performance = state.getPerformanceReport();
+
+    return {
+      cacheSize: performance.cacheSize,
+      cacheHitRate: performance.cacheHitRate,
+      backgroundTasksActive: performance.backgroundTasksActive,
+      memoryUsage: performance.memoryUsage,
+      totalComputations: performance.totalComputations,
+      averageComputationTime: performance.averageComputationTime,
+      hasError: !!state.error,
+      isHealthy: !state.error && performance.cacheHitRate >= 0,
+    };
+  },
+
   checkAllStores: () => {
     const garden = storeHealthCheck.checkGardenStore();
     const activity = storeHealthCheck.checkActivityStore();
     const notifications = storeHealthCheck.checkNotificationStore();
     const preferences = storeHealthCheck.checkPreferencesStore();
     const analysis = storeHealthCheck.checkAnalysisStore();
+    const user = storeHealthCheck.checkUserStore();
+    const insights = storeHealthCheck.checkInsightsStore();
 
     return {
       garden,
@@ -280,10 +363,13 @@ export const storeHealthCheck = {
       notifications,
       preferences,
       analysis,
+      user,
+      insights,
       overall: {
         timestamp: new Date(),
         allHealthy: garden.isHealthy && activity.isHealthy &&
-                   notifications.isHealthy && preferences.isHealthy && analysis.isHealthy,
+                   notifications.isHealthy && preferences.isHealthy &&
+                   analysis.isHealthy && user.isHealthy && insights.isHealthy,
       },
     };
   },
@@ -314,6 +400,11 @@ export const devUtils = {
         useGardenStore.getState().addPlant(plant);
       });
 
+      // Create sample user if none exists
+      if (!useUserStore.getState().user) {
+        useUserStore.getState().createDefaultUser('Plant Developer', 'dev@smartplant.app');
+      }
+
       console.log('Stores seeded with sample data');
     }
   },
@@ -331,6 +422,7 @@ export const devUtils = {
     if (__DEV__) {
       console.log('Garden Store:', useGardenStore.getState());
       console.log('Activity Store:', useActivityStore.getState());
+      console.log('User Store:', useUserStore.getState());
       console.log('Store Health:', storeHealthCheck.checkAllStores());
     }
   },

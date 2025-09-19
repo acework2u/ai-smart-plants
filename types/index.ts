@@ -4,6 +4,7 @@ export * from './activity';
 export * from './notifications';
 export * from './ai';
 export * from './weather';
+export * from './insights';
 
 // Common utility types
 export interface PaginationParams {
@@ -126,6 +127,7 @@ export const STORAGE_KEYS = {
   NOTIFICATION_FILTER: '@spa/notiFilter',
   PLANT_PREFS: '@spa/plantPrefs',
   USER_PREFERENCES: '@spa/userPrefs',
+  USER: '@spa/user',
   PLANT_PREFS_PREFIX: '@spa/plantPrefs:',
   ANALYSIS_CACHE: '@spa/analysisCache',
   APP_STATE: '@spa/appState',
