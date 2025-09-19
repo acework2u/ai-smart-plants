@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Image,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
 import {
@@ -17,6 +18,11 @@ import {
   Columns2,
   Rows3,
   ArrowDownWideNarrow,
+  ArrowUp,
+  Filter,
+  X,
+  Calendar,
+  Clock,
 } from 'lucide-react-native';
 import { Button, Chip } from '../../components/atoms';
 import { OptimizedFlatList } from '../../components/atoms/OptimizedFlatList';
@@ -38,6 +44,22 @@ export default function GardenScreen() {
   const [isSearching, setIsSearching] = React.useState(false);
   const [sortOption, setSortOption] = React.useState<'recent' | 'name' | 'status'>('recent');
   const [viewMode, setViewMode] = React.useState<'grid' | 'list'>('grid');
+
+  // Enhanced filter states
+  const [showAdvancedFilters, setShowAdvancedFilters] = React.useState(false);
+  const [dateFilter, setDateFilter] = React.useState<'all' | 'today' | 'week' | 'month'>('all');
+  const [activityFilter, setActivityFilter] = React.useState<'all' | 'recent' | 'overdue'>('all');
+
+  // Pagination states for infinite scroll
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const [isLoadingMore, setIsLoadingMore] = React.useState(false);
+  const [hasMore, setHasMore] = React.useState(true);
+  const [showScrollTop, setShowScrollTop] = React.useState(false);
+  const ITEMS_PER_PAGE = 20;
+
+  // Ref for FlatList to handle scroll to top
+  const listRef = React.useRef<any>(null);
+
   const { theme } = useTheme();
   const setSearchQuery = useGardenStore((s) => s.setSearchQuery);
   const setFilter = useGardenStore((s) => s.setFilter);
@@ -66,9 +88,64 @@ export default function GardenScreen() {
     return {
       total,
       healthy,
+      warning,
+      critical,
       attention: warning + critical,
     };
   }, [plants, stats]);
+
+  // Enhanced filter counts with date and activity filters
+  const filterCounts = useMemo(() => {
+    let filteredPlants = [...plants];
+
+    // Apply date filter
+    if (dateFilter !== 'all') {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+      filteredPlants = filteredPlants.filter((plant) => {
+        const plantDate = new Date(plant.createdAt);
+
+        switch (dateFilter) {
+          case 'today':
+            return plantDate >= today;
+          case 'week':
+            const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+            return plantDate >= weekAgo;
+          case 'month':
+            const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+            return plantDate >= monthAgo;
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Apply activity filter
+    if (activityFilter !== 'all') {
+      filteredPlants = filteredPlants.filter((plant) => {
+        if (activityFilter === 'recent') {
+          return plant.metadata?.lastActivity;
+        } else if (activityFilter === 'overdue') {
+          // Plants that haven't been watered in 7+ days (example logic)
+          const lastWatered = plant.metadata?.lastWatered;
+          if (lastWatered && typeof lastWatered === 'string') {
+            const daysSince = (Date.now() - new Date(lastWatered).getTime()) / (1000 * 60 * 60 * 24);
+            return daysSince > 7;
+          }
+          return false;
+        }
+        return true;
+      });
+    }
+
+    return {
+      all: filteredPlants.length,
+      healthy: filteredPlants.filter((p) => p.status === 'Healthy').length,
+      warning: filteredPlants.filter((p) => p.status === 'Warning').length,
+      critical: filteredPlants.filter((p) => p.status === 'Critical').length,
+    };
+  }, [plants, dateFilter, activityFilter]);
 
   const handlePlantPress = useCallback((plantId: string) => {
     router.push(`/plant/${plantId}`);
@@ -82,6 +159,9 @@ export default function GardenScreen() {
     setRefreshing(true);
     try {
       await new Promise((resolve) => setTimeout(resolve, 1500));
+      // Reset pagination on refresh
+      setCurrentPage(1);
+      setHasMore(true);
     } finally {
       setRefreshing(false);
     }
@@ -89,6 +169,9 @@ export default function GardenScreen() {
 
   const handleSearch = useCallback((query: string) => {
     setSearchQueryLocal(query);
+    // Reset pagination when searching
+    setCurrentPage(1);
+    setHasMore(true);
 
     if (query.length > 0) {
       setIsSearching(true);
@@ -104,33 +187,142 @@ export default function GardenScreen() {
   }, [setSearchQuery]);
 
   const sortedPlants = useMemo(() => {
+    let filtered = [...plants];
+
+    // Apply advanced date filter
+    if (dateFilter !== 'all') {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+      filtered = filtered.filter((plant) => {
+        const plantDate = new Date(plant.createdAt);
+
+        switch (dateFilter) {
+          case 'today':
+            return plantDate >= today;
+          case 'week':
+            const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+            return plantDate >= weekAgo;
+          case 'month':
+            const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+            return plantDate >= monthAgo;
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Apply advanced activity filter
+    if (activityFilter !== 'all') {
+      filtered = filtered.filter((plant) => {
+        if (activityFilter === 'recent') {
+          return plant.metadata?.lastActivity;
+        } else if (activityFilter === 'overdue') {
+          // Plants that haven't been watered in 7+ days
+          const lastWatered = plant.metadata?.lastWatered;
+          if (lastWatered && typeof lastWatered === 'string') {
+            const daysSince = (Date.now() - new Date(lastWatered).getTime()) / (1000 * 60 * 60 * 24);
+            return daysSince > 7;
+          }
+          return false;
+        }
+        return true;
+      });
+    }
+
+    // Apply sorting
     if (sortOption === 'name') {
-      return [...plants].sort((a, b) => a.name.localeCompare(b.name));
-    }
-
-    if (sortOption === 'status') {
+      filtered = filtered.sort((a, b) => a.name.localeCompare(b.name));
+    } else if (sortOption === 'status') {
       const order = { Healthy: 0, Warning: 1, Critical: 2 } as const;
-      return [...plants].sort((a, b) => order[a.status] - order[b.status]);
+      filtered = filtered.sort((a, b) => order[a.status] - order[b.status]);
+    } else {
+      filtered = filtered.sort((a, b) => {
+        const aDate = new Date(a.updatedAt ?? a.createdAt).getTime();
+        const bDate = new Date(b.updatedAt ?? b.createdAt).getTime();
+        return bDate - aDate;
+      });
     }
 
-    return [...plants].sort((a, b) => {
-      const aDate = new Date(a.updatedAt ?? a.createdAt).getTime();
-      const bDate = new Date(b.updatedAt ?? b.createdAt).getTime();
-      return bDate - aDate;
-    });
-  }, [plants, sortOption]);
+    return filtered;
+  }, [plants, sortOption, dateFilter, activityFilter]);
+
+  // Paginated plants for infinite scroll
+  const paginatedPlants = useMemo(() => {
+    const endIndex = currentPage * ITEMS_PER_PAGE;
+    return sortedPlants.slice(0, endIndex);
+  }, [sortedPlants, currentPage]);
+
+  // Handle load more for infinite scroll
+  const handleLoadMore = useCallback(async () => {
+    if (isLoadingMore || !hasMore || isSearching) return;
+
+    const totalPages = Math.ceil(sortedPlants.length / ITEMS_PER_PAGE);
+    if (currentPage >= totalPages) {
+      setHasMore(false);
+      return;
+    }
+
+    setIsLoadingMore(true);
+    // Simulate network delay for smooth UX
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    setCurrentPage(prev => prev + 1);
+    setIsLoadingMore(false);
+
+    // Check if we've loaded all items
+    if (currentPage + 1 >= totalPages) {
+      setHasMore(false);
+    }
+  }, [isLoadingMore, hasMore, isSearching, sortedPlants.length, currentPage]);
+
+  // Handle scroll events for scroll-to-top button
+  const handleScroll = useCallback((event: any) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    setShowScrollTop(offsetY > 500);
+  }, []);
+
+  // Scroll to top function
+  const scrollToTop = useCallback(() => {
+    listRef.current?.scrollToOffset({ offset: 0, animated: true });
+  }, []);
+
+  // Enhanced filter handlers
+  const clearAllFilters = useCallback(() => {
+    setFilter('all');
+    setDateFilter('all');
+    setActivityFilter('all');
+    setSearchQueryLocal('');
+    setSearchQuery('');
+    setCurrentPage(1);
+    setHasMore(true);
+  }, [setFilter, setSearchQuery]);
+
+  const hasActiveFilters = useMemo(() => {
+    return activeFilter !== 'all' || dateFilter !== 'all' || activityFilter !== 'all' || searchQuery.length > 0;
+  }, [activeFilter, dateFilter, activityFilter, searchQuery]);
+
+  const getFilterTitle = useCallback((filter: string, count: number) => {
+    const labels = {
+      'all': 'ทั้งหมด',
+      'Healthy': 'แข็งแรง',
+      'Warning': 'เตือน',
+      'Critical': 'วิกฤต'
+    };
+    return `${labels[filter as keyof typeof labels] || filter} (${count})`;
+  }, []);
 
   const listCardTheme = useMemo(
     () => ({
       backgroundColor: theme.colors.surface.primary,
-      borderColor: theme.colors.border.light,
+      borderColor: theme.colors.border,
       shadowColor: theme.isDark ? 'rgba(0,0,0,0.45)' : 'rgba(15,23,42,0.14)',
     }),
     [theme],
   );
 
-  const viewToggleInactiveBg = theme.colors.background.tertiary;
-  const viewToggleActiveBg = `${theme.colors.primarySoft}99`;
+  const viewToggleInactiveBg = theme.colors.gray100;
+  const viewToggleActiveBg = `${theme.colors.primary}15`;
 
   const renderPlantCard = useCallback(({ item: plant }: { item: any }) => {
     const statusAccent = plant.status === 'Healthy'
@@ -142,12 +334,20 @@ export default function GardenScreen() {
     if (viewMode === 'list') {
       return (
         <TouchableOpacity
-          style={[styles.listCard, listCardTheme, { borderLeftColor: statusAccent }]}
+          style={[
+            styles.listCard,
+            listCardTheme,
+            {
+              borderLeftColor: statusAccent,
+              backgroundColor: theme.colors.surface.primary,
+              borderColor: theme.colors.border
+            }
+          ]}
           onPress={() => handlePlantPress(plant.id)}
           activeOpacity={0.9}
         >
           <View style={styles.listCardRow}>
-            <View style={styles.listImageWrapper}>
+            <View style={[styles.listImageWrapper, { backgroundColor: theme.colors.gray100 }]}>
               {plant.imageUri ? (
                 <Image source={{ uri: plant.imageUri }} style={styles.listImage} resizeMode="cover" />
               ) : (
@@ -156,17 +356,17 @@ export default function GardenScreen() {
                 </View>
               )}
             </View>
-            <View style={styles.listContent}>
+            <View style={styles.listCardContent}>
               <View style={styles.listCardHeader}>
-                <Text style={styles.listCardTitle} numberOfLines={1}>{plant.name}</Text>
+                <Text style={[styles.listCardTitle, { color: theme.colors.text.primary }]} numberOfLines={1}>{plant.name}</Text>
                 <Chip label={plant.status} status={plant.status} size="sm" />
               </View>
               {plant.scientificName ? (
-                <Text style={styles.listCardSubtitle} numberOfLines={1}>{plant.scientificName}</Text>
+                <Text style={[styles.listCardSubtitle, { color: theme.colors.text.secondary }]} numberOfLines={1}>{plant.scientificName}</Text>
               ) : null}
               <View style={styles.listMetaRow}>
-                <Text style={styles.listMetaLabel}>เพิ่มเมื่อ</Text>
-                <Text style={styles.listMetaValue}>
+                <Text style={[styles.listMetaLabel, { color: theme.colors.text.tertiary }]}>เพิ่มเมื่อ</Text>
+                <Text style={[styles.listMetaValue, { color: theme.colors.text.primary }]}>
                   {new Date(plant.createdAt).toLocaleDateString('th-TH', {
                     day: 'numeric', month: 'short', year: 'numeric',
                   })}
@@ -174,8 +374,8 @@ export default function GardenScreen() {
               </View>
               {plant.metadata?.lastActivity && (
                 <View style={styles.listMetaRow}>
-                  <Text style={styles.listMetaLabel}>กิจกรรมล่าสุด</Text>
-                  <Text style={styles.listMetaValue}>{plant.metadata.lastActivity}</Text>
+                  <Text style={[styles.listMetaLabel, { color: theme.colors.text.tertiary }]}>กิจกรรมล่าสุด</Text>
+                  <Text style={[styles.listMetaValue, { color: theme.colors.text.primary }]}>{plant.metadata.lastActivity}</Text>
                 </View>
               )}
             </View>
@@ -186,11 +386,18 @@ export default function GardenScreen() {
 
     return (
       <TouchableOpacity
-        style={[styles.gridCard, { borderTopColor: statusAccent }]}
+        style={[
+          styles.gridCard,
+          {
+            borderTopColor: statusAccent,
+            backgroundColor: theme.colors.surface.primary,
+            borderColor: theme.colors.border
+          }
+        ]}
         onPress={() => handlePlantPress(plant.id)}
         activeOpacity={0.85}
       >
-        <View style={styles.gridImageWrapper}>
+        <View style={[styles.gridImageWrapper, { backgroundColor: theme.colors.gray100 }]}>
           {plant.imageUri ? (
             <Image source={{ uri: plant.imageUri }} style={styles.gridImage} resizeMode="cover" />
           ) : (
@@ -201,15 +408,15 @@ export default function GardenScreen() {
         </View>
         <View style={styles.gridCardBody}>
           <View style={styles.gridCardHeader}>
-            <Text style={styles.gridCardName} numberOfLines={2}>{plant.name}</Text>
-            <Chip label={plant.status} status={plant.status} size="xs" />
+            <Text style={[styles.gridCardName, { color: theme.colors.text.primary }]} numberOfLines={2}>{plant.name}</Text>
+            <Chip label={plant.status} status={plant.status} size="sm" />
           </View>
           {plant.scientificName ? (
-            <Text style={styles.gridCardSubtitle} numberOfLines={1}>{plant.scientificName}</Text>
+            <Text style={[styles.gridCardSubtitle, { color: theme.colors.text.secondary }]} numberOfLines={1}>{plant.scientificName}</Text>
           ) : null}
           <View style={styles.gridMetaRow}>
-            <Text style={styles.gridMetaLabel}>เพิ่มเมื่อ</Text>
-            <Text style={styles.gridMetaValue}>
+            <Text style={[styles.gridMetaLabel, { color: theme.colors.text.tertiary }]}>เพิ่มเมื่อ</Text>
+            <Text style={[styles.gridMetaValue, { color: theme.colors.text.primary }]}>
               {new Date(plant.createdAt).toLocaleDateString('th-TH', {
                 day: 'numeric', month: 'short',
               })}
@@ -218,14 +425,14 @@ export default function GardenScreen() {
         </View>
       </TouchableOpacity>
     );
-  }, [handlePlantPress, listCardTheme, theme.colors.error, theme.colors.primary, theme.colors.success, theme.colors.warning, viewMode]);
+  }, [handlePlantPress, listCardTheme, theme.colors.border, theme.colors.error, theme.colors.gray100, theme.colors.primary, theme.colors.success, theme.colors.surface.primary, theme.colors.warning, theme.colors.text.primary, theme.colors.text.secondary, theme.colors.text.tertiary, viewMode]);
 
   const renderEmptyState = useCallback(() => (
     <View style={styles.emptyContainer}>
       <View style={styles.emptyState}>
-        <Leaf size={64} color={colors.gray[400]} />
-        <Text style={styles.emptyTitle}>เริ่มต้นสร้างสวน</Text>
-        <Text style={styles.emptySubtitle}>
+        <Leaf size={64} color={theme.colors.text.disabled} />
+        <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>เริ่มต้นสร้างสวน</Text>
+        <Text style={[styles.emptySubtitle, { color: theme.colors.text.secondary }]}>
           เพิ่มต้นไม้แรกของคุณเพื่อเริ่มต้นการดูแล
         </Text>
         <Button
@@ -236,7 +443,7 @@ export default function GardenScreen() {
         />
       </View>
     </View>
-  ), [handleAddPlant]);
+  ), [handleAddPlant, theme.colors.text.disabled, theme.colors.text.primary, theme.colors.text.secondary]);
 
   const renderSearchSkeleton = useCallback(() => (
     <View style={styles.skeletonContainer}>
@@ -253,42 +460,71 @@ export default function GardenScreen() {
     </View>
   ), []);
 
+  // Footer component for infinite scroll
+  const renderFooter = useCallback(() => {
+    if (!isLoadingMore) return null;
+
+    return (
+      <View style={styles.loadingFooter}>
+        <ActivityIndicator size="small" color={theme.colors.primary} />
+        <Text style={[styles.loadingText, { color: theme.colors.text.secondary }]}>
+          กำลังโหลดเพิ่มเติม...
+        </Text>
+      </View>
+    );
+  }, [isLoadingMore, theme.colors.primary, theme.colors.text.secondary]);
+
+  // End reached message
+  const renderEndMessage = useCallback(() => {
+    if (hasMore || paginatedPlants.length === 0) return null;
+
+    return (
+      <View style={styles.endMessage}>
+        <Text style={[styles.endMessageText, { color: theme.colors.text.tertiary }]}>
+          • แสดงต้นไม้ทั้งหมดแล้ว ({paginatedPlants.length} ต้น) •
+        </Text>
+      </View>
+    );
+  }, [hasMore, paginatedPlants.length, theme.colors.text.tertiary]);
+
   const listHeader = useMemo(() => (
     <View>
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: theme.colors.surface.primary, borderBottomColor: theme.colors.border }]}>
         <View style={styles.heroHeaderRow}>
           <View>
-            <Text style={styles.heroTitle}>สวนของฉัน</Text>
-            <Text style={styles.heroSubtitle}>
+            <Text style={[styles.heroTitle, { color: theme.colors.text.primary }]}>สวนของฉัน</Text>
+            <Text style={[styles.heroSubtitle, { color: theme.colors.text.secondary }]}>
               ต้นไม้ทั้งหมด {heroStats.total} ต้น · ต้องดูแล {heroStats.attention} ต้น
             </Text>
           </View>
           <Button title="เพิ่ม" onPress={handleAddPlant} variant="primary" size="sm" />
         </View>
         <View style={styles.heroMetrics}>
-          <View style={styles.heroMetricCard}>
-            <Text style={styles.heroMetricValue}>{heroStats.total}</Text>
-            <Text style={styles.heroMetricLabel}>ต้นทั้งหมด</Text>
+          <View style={[styles.heroMetricCard, { backgroundColor: theme.colors.gray100 }]}>
+            <Text style={[styles.heroMetricValue, { color: theme.colors.text.primary }]}>{heroStats.total}</Text>
+            <Text style={[styles.heroMetricLabel, { color: theme.colors.text.secondary }]}>ต้นทั้งหมด</Text>
           </View>
-          <View style={styles.heroMetricCard}>
-            <Text style={styles.heroMetricValue}>{heroStats.healthy}</Text>
-            <Text style={styles.heroMetricLabel}>สุขภาพดี</Text>
+          <View style={[styles.heroMetricCard, { backgroundColor: theme.colors.gray100 }]}>
+            <Text style={[styles.heroMetricValue, { color: theme.colors.text.primary }]}>{heroStats.healthy}</Text>
+            <Text style={[styles.heroMetricLabel, { color: theme.colors.text.secondary }]}>สุขภาพดี</Text>
           </View>
-          <View style={styles.heroMetricCard}>
-            <Text style={styles.heroMetricValue}>{heroStats.attention}</Text>
-            <Text style={styles.heroMetricLabel}>ต้องติดตาม</Text>
+          <View style={[styles.heroMetricCard, { backgroundColor: theme.colors.gray100 }]}>
+            <Text style={[styles.heroMetricValue, { color: theme.colors.text.primary }]}>{heroStats.attention}</Text>
+            <Text style={[styles.heroMetricLabel, { color: theme.colors.text.secondary }]}>ต้องติดตาม</Text>
           </View>
         </View>
       </View>
 
       <View style={[styles.controlCard, {
         backgroundColor: theme.colors.surface.primary,
-        borderColor: theme.colors.border.light,
-        shadowColor: theme.isDark ? 'rgba(0,0,0,0.45)' : 'rgba(15,23,42,0.12)',
+        borderTopWidth: StyleSheet.hairlineWidth,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+        borderTopColor: theme.colors.border,
+        borderBottomColor: theme.colors.border,
       }]}
       >
         <View style={styles.controlRow}>
-          <View style={[styles.searchField, { backgroundColor: theme.colors.background.tertiary }]}>
+          <View style={[styles.searchField, { backgroundColor: theme.colors.gray100 }]}>
             <Search
               size={18}
               color={isSearching ? theme.colors.primary : theme.colors.text.tertiary}
@@ -306,39 +542,65 @@ export default function GardenScreen() {
             )}
           </View>
           <TouchableOpacity
-            style={[styles.sortButton, { backgroundColor: theme.colors.background.tertiary }]}
+            style={[styles.sortButton, { backgroundColor: theme.colors.gray100 }]}
             onPress={() => {
               setSortOption((prev) => {
                 if (prev === 'recent') return 'name';
                 if (prev === 'name') return 'status';
                 return 'recent';
               });
-              MemoryManager.log('GardenScreen', 'sort-change');
+              // Log sort change
+              if (__DEV__) console.log('Sort changed:', sortOption);
             }}
           >
             <ArrowDownWideNarrow size={18} color={theme.colors.text.secondary} />
-            <Text style={styles.sortLabel}>
+            <Text style={[styles.sortLabel, { color: theme.colors.text.secondary }]}>
               {sortOption === 'recent' ? 'ล่าสุด' : sortOption === 'name' ? 'ตามชื่อ' : 'ตามสถานะ'}
             </Text>
           </TouchableOpacity>
         </View>
 
-        <View style={styles.filterSection}>
-          <Text style={styles.filterLabel}>สถานะ</Text>
+        {/* Enhanced Filter Section */}
+        <View style={[styles.enhancedFilterSection, { backgroundColor: theme.colors.background }]}>
+          {/* Primary Filter Row */}
+          <View style={styles.primaryFilterRow}>
+            <Text style={[styles.filterLabel, { color: theme.colors.text.secondary }]}>สถานะ</Text>
+            <View style={styles.filterActions}>
+              {hasActiveFilters && (
+                <TouchableOpacity
+                  style={styles.clearFiltersButton}
+                  onPress={clearAllFilters}
+                >
+                  <X size={14} color={theme.colors.text.secondary} />
+                  <Text style={[styles.clearFiltersText, { color: theme.colors.text.secondary }]}>เคลียร์</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                style={[styles.advancedFilterButton, { backgroundColor: showAdvancedFilters ? theme.colors.primary + '15' : 'transparent' }]}
+                onPress={() => setShowAdvancedFilters(!showAdvancedFilters)}
+              >
+                <Filter size={16} color={showAdvancedFilters ? theme.colors.primary : theme.colors.text.secondary} />
+                <Text style={[styles.advancedFilterText, { color: showAdvancedFilters ? theme.colors.primary : theme.colors.text.secondary }]}>ตัวกรอง</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Status Filter Chips with Counts */}
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.filterRow}
+            style={styles.filterScrollView}
           >
             <Chip
-              label="ทั้งหมด"
+              label={getFilterTitle('all', filterCounts.all)}
               variant="filter"
               selected={activeFilter === 'all'}
               onPress={() => setFilter('all')}
               style={styles.filterChip}
             />
             <Chip
-              label="แข็งแรง"
+              label={getFilterTitle('Healthy', filterCounts.healthy)}
               variant="filter"
               status="Healthy"
               selected={activeFilter === 'Healthy'}
@@ -346,7 +608,7 @@ export default function GardenScreen() {
               style={styles.filterChip}
             />
             <Chip
-              label="เตือน"
+              label={getFilterTitle('Warning', filterCounts.warning)}
               variant="filter"
               status="Warning"
               selected={activeFilter === 'Warning'}
@@ -354,7 +616,7 @@ export default function GardenScreen() {
               style={styles.filterChip}
             />
             <Chip
-              label="วิกฤต"
+              label={getFilterTitle('Critical', filterCounts.critical)}
               variant="filter"
               status="Critical"
               selected={activeFilter === 'Critical'}
@@ -362,49 +624,168 @@ export default function GardenScreen() {
               style={styles.filterChip}
             />
           </ScrollView>
+
+          {/* Advanced Filters */}
+          {showAdvancedFilters && (
+            <View style={styles.advancedFilters}>
+              {/* Date Filter */}
+              <View style={styles.advancedFilterRow}>
+                <View style={styles.advancedFilterHeader}>
+                  <Calendar size={16} color={theme.colors.text.secondary} />
+                  <Text style={[styles.advancedFilterLabel, { color: theme.colors.text.secondary }]}>วันที่เพิ่ม</Text>
+                </View>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.advancedFilterChips}
+                >
+                  <Chip
+                    label="ทั้งหมด"
+                    variant="filter"
+                    selected={dateFilter === 'all'}
+                    onPress={() => setDateFilter('all')}
+                    size="sm"
+                    style={styles.advancedFilterChip}
+                  />
+                  <Chip
+                    label="วันนี้"
+                    variant="filter"
+                    selected={dateFilter === 'today'}
+                    onPress={() => setDateFilter('today')}
+                    size="sm"
+                    style={styles.advancedFilterChip}
+                  />
+                  <Chip
+                    label="สัปดาห์นี้"
+                    variant="filter"
+                    selected={dateFilter === 'week'}
+                    onPress={() => setDateFilter('week')}
+                    size="sm"
+                    style={styles.advancedFilterChip}
+                  />
+                  <Chip
+                    label="เดือนนี้"
+                    variant="filter"
+                    selected={dateFilter === 'month'}
+                    onPress={() => setDateFilter('month')}
+                    size="sm"
+                    style={styles.advancedFilterChip}
+                  />
+                </ScrollView>
+              </View>
+
+              {/* Activity Filter */}
+              <View style={styles.advancedFilterRow}>
+                <View style={styles.advancedFilterHeader}>
+                  <Clock size={16} color={theme.colors.text.secondary} />
+                  <Text style={[styles.advancedFilterLabel, { color: theme.colors.text.secondary }]}>กิจกรรม</Text>
+                </View>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.advancedFilterChips}
+                >
+                  <Chip
+                    label="ทั้งหมด"
+                    variant="filter"
+                    selected={activityFilter === 'all'}
+                    onPress={() => setActivityFilter('all')}
+                    size="sm"
+                    style={styles.advancedFilterChip}
+                  />
+                  <Chip
+                    label="มีกิจกรรมล่าสุด"
+                    variant="filter"
+                    selected={activityFilter === 'recent'}
+                    onPress={() => setActivityFilter('recent')}
+                    size="sm"
+                    style={styles.advancedFilterChip}
+                  />
+                  <Chip
+                    label="ต้องดูแล"
+                    variant="filter"
+                    selected={activityFilter === 'overdue'}
+                    onPress={() => setActivityFilter('overdue')}
+                    size="sm"
+                    style={styles.advancedFilterChip}
+                  />
+                </ScrollView>
+              </View>
+            </View>
+          )}
         </View>
 
         <View style={styles.viewToggleRow}>
-          <Text style={styles.viewToggleLabel}>มุมมอง</Text>
+          <Text style={[styles.viewToggleLabel, { color: theme.colors.text.secondary }]}>มุมมอง</Text>
           <View style={styles.viewToggleGroup}>
             <TouchableOpacity
               onPress={() => setViewMode('grid')}
               style={[styles.viewToggleButton, { backgroundColor: viewToggleInactiveBg }, viewMode === 'grid' && { backgroundColor: viewToggleActiveBg }]}
             >
               <Columns2 size={16} color={viewMode === 'grid' ? theme.colors.primary : theme.colors.text.secondary} />
-              <Text style={[styles.viewToggleText, viewMode === 'grid' && styles.viewToggleTextActive]}>Grid</Text>
+              <Text style={[styles.viewToggleText, { color: viewMode === 'grid' ? theme.colors.primary : theme.colors.text.secondary }]}>Grid</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => setViewMode('list')}
               style={[styles.viewToggleButton, { backgroundColor: viewToggleInactiveBg }, viewMode === 'list' && { backgroundColor: viewToggleActiveBg }]}
             >
               <Rows3 size={16} color={viewMode === 'list' ? theme.colors.primary : theme.colors.text.secondary} />
-              <Text style={[styles.viewToggleText, viewMode === 'list' && styles.viewToggleTextActive]}>List</Text>
+              <Text style={[styles.viewToggleText, { color: viewMode === 'list' ? theme.colors.primary : theme.colors.text.secondary }]}>List</Text>
             </TouchableOpacity>
           </View>
         </View>
       </View>
     </View>
-  ), [activeFilter, handleAddPlant, handleSearch, heroStats.attention, heroStats.healthy, heroStats.total, isSearching, searchQuery, setFilter, sortOption, theme.colors.background.secondary, theme.colors.background.tertiary, theme.colors.border.light, theme.colors.primary, theme.colors.primarySoft, theme.colors.surface.primary, theme.colors.text.secondary, theme.colors.text.tertiary, viewMode, viewToggleActiveBg, viewToggleInactiveBg]);
+  ), [
+    activeFilter,
+    handleAddPlant,
+    handleSearch,
+    heroStats.attention,
+    heroStats.healthy,
+    heroStats.total,
+    isSearching,
+    searchQuery,
+    setFilter,
+    sortOption,
+    theme.colors.gray100,
+    theme.colors.border,
+    theme.colors.primary,
+    theme.colors.surface.primary,
+    theme.colors.text.primary,
+    theme.colors.text.secondary,
+    theme.colors.text.tertiary,
+    viewMode,
+    viewToggleActiveBg,
+    viewToggleInactiveBg,
+    // Enhanced filter deps
+    showAdvancedFilters,
+    dateFilter,
+    activityFilter,
+    hasActiveFilters,
+    filterCounts,
+    getFilterTitle,
+    clearAllFilters
+  ]);
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <OptimizedFlatList
           data={[]}
-          renderItem={() => null}
+          renderItem={() => <View />}
           ListHeaderComponent={listHeader}
-          ListEmptyComponent={renderSearchSkeleton}
+          ListEmptyComponent={renderSearchSkeleton()}
         />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <OptimizedFlatList
+        ref={listRef}
         key={`${viewMode}-${isSearching ? 'loading' : 'ready'}`}
-        data={isSearching ? [] : sortedPlants}
+        data={isSearching ? [] : paginatedPlants}
         renderItem={renderPlantCard}
         numColumns={viewMode === 'grid' ? 3 : 1}
         enableVirtualization={true}
@@ -416,7 +797,23 @@ export default function GardenScreen() {
         refreshing={refreshing}
         ListHeaderComponent={listHeader}
         ListEmptyComponent={isSearching ? renderSearchSkeleton : renderEmptyState}
+        ListFooterComponent={hasMore ? renderFooter : renderEndMessage}
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.5}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
       />
+
+      {/* Scroll to Top Button */}
+      {showScrollTop && (
+        <TouchableOpacity
+          style={[styles.scrollToTop, { backgroundColor: theme.colors.primary }]}
+          onPress={scrollToTop}
+          activeOpacity={0.8}
+        >
+          <ArrowUp size={20} color={theme.colors.white} />
+        </TouchableOpacity>
+      )}
     </SafeAreaView>
   );
 }
@@ -424,15 +821,12 @@ export default function GardenScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background.primary,
   },
   header: {
     paddingHorizontal: getSpacing(4),
     paddingTop: getSpacing(4),
     paddingBottom: getSpacing(3),
-    backgroundColor: colors.white,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border.light,
   },
   heroHeaderRow: {
     flexDirection: 'row',
@@ -442,13 +836,11 @@ const styles = StyleSheet.create({
   heroTitle: {
     fontSize: typography.fontSize['2xl'],
     fontFamily: typography.fontFamily.bold,
-    color: colors.text.primary,
   },
   heroSubtitle: {
     marginTop: getSpacing(1),
     fontSize: typography.fontSize.sm,
     fontFamily: typography.fontFamily.regular,
-    color: colors.text.secondary,
   },
   heroMetrics: {
     flexDirection: 'row',
@@ -459,36 +851,26 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: getSpacing(3),
     borderRadius: radius.lg,
-    backgroundColor: colors.background.secondary,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border.light,
+    borderColor: 'rgba(0,0,0,0.1)',
   },
   heroMetricValue: {
     fontSize: typography.fontSize['2xl'],
     fontFamily: typography.fontFamily.bold,
-    color: colors.text.primary,
   },
   heroMetricLabel: {
     marginTop: getSpacing(1),
     fontSize: typography.fontSize.xs,
     fontFamily: typography.fontFamily.medium,
-    color: colors.text.secondary,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
   },
   controlCard: {
-    marginHorizontal: getSpacing(4),
-    marginTop: getSpacing(3),
-    marginBottom: getSpacing(3),
-    backgroundColor: colors.white,
-    borderRadius: radius.xl,
-    padding: getSpacing(3),
-    gap: getSpacing(2),
-    shadowColor: 'rgba(15,23,42,0.08)',
-    shadowOpacity: 0.12,
-    shadowOffset: { width: 0, height: 8 },
-    shadowRadius: 16,
-    elevation: 3,
+    marginTop: getSpacing(2),
+    marginBottom: getSpacing(2),
+    paddingHorizontal: getSpacing(4),
+    paddingVertical: getSpacing(4),
+    gap: getSpacing(3),
   },
   controlRow: {
     flexDirection: 'row',
@@ -507,7 +889,6 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     paddingVertical: 0,
-    color: colors.text.primary,
   },
   sortButton: {
     flexDirection: 'row',
@@ -520,26 +901,102 @@ const styles = StyleSheet.create({
   sortLabel: {
     fontSize: typography.fontSize.sm,
     fontFamily: typography.fontFamily.medium,
-    color: colors.text.secondary,
   },
   filterSection: {
     gap: getSpacing(1),
   },
+  enhancedFilterSection: {
+    gap: getSpacing(3),
+    paddingVertical: getSpacing(3),
+    paddingHorizontal: getSpacing(4),
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(0,0,0,0.05)',
+  },
+  primaryFilterRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  filterActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: getSpacing(2),
+  },
+  clearFiltersButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: getSpacing(1),
+    paddingHorizontal: getSpacing(3),
+    paddingVertical: getSpacing(1.5),
+    borderRadius: radius.lg,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+  },
+  clearFiltersText: {
+    fontSize: typography.fontSize.xs,
+    fontFamily: typography.fontFamily.medium,
+  },
+  advancedFilterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: getSpacing(1),
+    paddingHorizontal: getSpacing(3),
+    paddingVertical: getSpacing(1.5),
+    borderRadius: radius.lg,
+  },
+  advancedFilterText: {
+    fontSize: typography.fontSize.xs,
+    fontFamily: typography.fontFamily.medium,
+  },
+  advancedFilters: {
+    paddingTop: getSpacing(3),
+    marginTop: getSpacing(2),
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(0,0,0,0.1)',
+    gap: getSpacing(4),
+  },
+  advancedFilterRow: {
+    gap: getSpacing(2),
+  },
+  advancedFilterHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: getSpacing(1),
+  },
+  advancedFilterLabel: {
+    fontSize: typography.fontSize.xs,
+    fontFamily: typography.fontFamily.medium,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
+  advancedFilterChips: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: getSpacing(2),
+    paddingVertical: getSpacing(1),
+    paddingHorizontal: getSpacing(4),
+  },
+  advancedFilterChip: {
+    marginRight: getSpacing(1.5),
+  },
   filterLabel: {
     fontSize: typography.fontSize.xs,
     fontFamily: typography.fontFamily.medium,
-    color: colors.text.secondary,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
+  },
+  filterScrollView: {
+    flexGrow: 0,
   },
   filterRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: getSpacing(1.5),
-    paddingVertical: getSpacing(1),
+    gap: getSpacing(2),
+    paddingVertical: getSpacing(2),
+    paddingHorizontal: getSpacing(4),
+    flexGrow: 1,
   },
   filterChip: {
-    marginRight: getSpacing(1.5),
+    marginRight: getSpacing(2),
   },
   viewToggleRow: {
     flexDirection: 'row',
@@ -549,7 +1006,6 @@ const styles = StyleSheet.create({
   viewToggleLabel: {
     fontSize: typography.fontSize.sm,
     fontFamily: typography.fontFamily.medium,
-    color: colors.text.secondary,
   },
   viewToggleGroup: {
     flexDirection: 'row',
@@ -566,10 +1022,6 @@ const styles = StyleSheet.create({
   viewToggleText: {
     fontSize: typography.fontSize.xs,
     fontFamily: typography.fontFamily.medium,
-    color: colors.text.secondary,
-  },
-  viewToggleTextActive: {
-    color: colors.primary,
   },
   list: {
     flex: 1,
@@ -584,11 +1036,9 @@ const styles = StyleSheet.create({
   gridCard: {
     flexBasis: '32%',
     maxWidth: '32%',
-    backgroundColor: colors.surface.primary,
     borderRadius: radius.lg,
     borderTopWidth: 3,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border.light,
     padding: getSpacing(3),
     shadowColor: 'rgba(15,23,42,0.12)',
     shadowOpacity: 0.14,
@@ -607,7 +1057,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     overflow: 'hidden',
     marginBottom: getSpacing(2),
-    backgroundColor: colors.background.tertiary,
   },
   gridImage: {
     width: '100%',
@@ -631,12 +1080,10 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: typography.fontSize.sm,
     fontFamily: typography.fontFamily.semibold,
-    color: colors.text.primary,
   },
   gridCardSubtitle: {
     fontSize: typography.fontSize.xs,
     fontFamily: typography.fontFamily.regular,
-    color: colors.text.secondary,
   },
   gridMetaRow: {
     flexDirection: 'row',
@@ -647,20 +1094,16 @@ const styles = StyleSheet.create({
   gridMetaLabel: {
     fontSize: typography.fontSize.xs,
     fontFamily: typography.fontFamily.medium,
-    color: colors.text.secondary,
   },
   gridMetaValue: {
     fontSize: typography.fontSize.xs,
     fontFamily: typography.fontFamily.semibold,
-    color: colors.text.primary,
   },
   listCard: {
     marginBottom: getSpacing(2.5),
     padding: getSpacing(3),
     borderRadius: radius.lg,
-    backgroundColor: colors.white,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border.light,
     shadowColor: 'rgba(15,23,42,0.14)',
     shadowOpacity: 0.16,
     shadowOffset: { width: 0, height: 12 },
@@ -677,7 +1120,6 @@ const styles = StyleSheet.create({
     height: 72,
     borderRadius: radius.lg,
     overflow: 'hidden',
-    backgroundColor: colors.background.tertiary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -690,7 +1132,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  listContent: {
+  listCardContent: {
     flex: 1,
     gap: getSpacing(1),
   },
@@ -702,7 +1144,6 @@ const styles = StyleSheet.create({
   listCardTitle: {
     fontSize: typography.fontSize.lg,
     fontFamily: typography.fontFamily.semibold,
-    color: colors.text.primary,
     flex: 1,
     marginRight: getSpacing(2),
   },
@@ -710,7 +1151,6 @@ const styles = StyleSheet.create({
     marginTop: getSpacing(1),
     fontSize: typography.fontSize.sm,
     fontFamily: typography.fontFamily.regular,
-    color: colors.text.secondary,
   },
   listMetaRow: {
     flexDirection: 'row',
@@ -720,14 +1160,12 @@ const styles = StyleSheet.create({
   listMetaLabel: {
     fontSize: typography.fontSize.xs,
     fontFamily: typography.fontFamily.medium,
-    color: colors.text.secondary,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
   },
   listMetaValue: {
     fontSize: typography.fontSize.sm,
     fontFamily: typography.fontFamily.medium,
-    color: colors.text.primary,
   },
   emptyContainer: {
     flex: 1,
@@ -743,7 +1181,6 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: typography.fontSize.xl,
     fontFamily: typography.fontFamily.semibold,
-    color: colors.text.primary,
     marginTop: getSpacing(4),
     marginBottom: getSpacing(2),
     textAlign: 'center',
@@ -751,7 +1188,6 @@ const styles = StyleSheet.create({
   emptySubtitle: {
     fontSize: typography.fontSize.base,
     fontFamily: typography.fontFamily.regular,
-    color: colors.text.secondary,
     textAlign: 'center',
     marginBottom: getSpacing(6),
     lineHeight: typography.fontSize.base * 1.5,
@@ -767,5 +1203,42 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: getSpacing(3),
+  },
+  loadingFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: getSpacing(4),
+    gap: getSpacing(2),
+  },
+  loadingText: {
+    fontSize: typography.fontSize.sm,
+    fontFamily: typography.fontFamily.medium,
+  },
+  endMessage: {
+    alignItems: 'center',
+    paddingVertical: getSpacing(4),
+    paddingHorizontal: getSpacing(4),
+  },
+  endMessageText: {
+    fontSize: typography.fontSize.xs,
+    fontFamily: typography.fontFamily.medium,
+    textAlign: 'center',
+    letterSpacing: 0.5,
+  },
+  scrollToTop: {
+    position: 'absolute',
+    bottom: getSpacing(20),
+    right: getSpacing(4),
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: 'rgba(0,0,0,0.25)',
+    shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 8,
+    elevation: 6,
   },
 });

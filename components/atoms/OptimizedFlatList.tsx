@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, memo } from 'react';
+import React, { useMemo, useCallback, memo, forwardRef } from 'react';
 import {
   FlatList,
   FlatListProps,
@@ -70,7 +70,7 @@ const DefaultEmptyComponentBase: React.FC<{
 const DefaultEmptyComponent = memo(DefaultEmptyComponentBase);
 DefaultEmptyComponent.displayName = 'DefaultEmptyComponent';
 
-function OptimizedFlatListComponent<T>({
+const OptimizedFlatListComponent = forwardRef<FlatList<any>, OptimizedFlatListProps<any>>(function OptimizedFlatListInner<T>({
   data,
   renderItem,
   itemHeight = 80,
@@ -83,7 +83,7 @@ function OptimizedFlatListComponent<T>({
   EmptyComponent,
   style,
   ...otherProps
-}: OptimizedFlatListProps<T>) {
+}: OptimizedFlatListProps<T>, ref) {
   const { theme } = useTheme();
 
   // Performance configuration based on device capabilities
@@ -166,9 +166,10 @@ function OptimizedFlatListComponent<T>({
 
   return (
     <FlatList
+      ref={ref}
       {...otherProps}
-      data={data}
-      renderItem={memoizedRenderItem}
+      data={data as any}
+      renderItem={memoizedRenderItem as any}
       keyExtractor={keyExtractor}
       style={[{ backgroundColor: theme.colors.background.primary }, style]}
       contentContainerStyle={[
@@ -197,11 +198,11 @@ function OptimizedFlatListComponent<T>({
       legacyImplementation={false}
     />
   );
-}
+});
 
 // Export memoized component to prevent unnecessary re-renders
 export const OptimizedFlatList = memo(OptimizedFlatListComponent) as <T>(
-  props: OptimizedFlatListProps<T>
+  props: OptimizedFlatListProps<T> & { ref?: React.Ref<FlatList<T>> }
 ) => React.ReactElement;
 
 // Specialized components for common use cases
