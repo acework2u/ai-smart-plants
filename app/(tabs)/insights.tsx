@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import {
   SafeAreaView,
   ScrollView,
@@ -17,6 +17,9 @@ import {
 } from 'lucide-react-native';
 import { getSpacing, radius, typography } from '../../core/theme';
 import { useTheme, type Theme } from '../../contexts/ThemeContext';
+import { useGardenStore } from '../../stores/garden';
+import { insightsActions } from '../../stores/insightsStore';
+import type { ActivityFrequencyData, EngagementMetrics, ProductivityScore } from '../../types';
 
 const heroFocus = {
   title: 'สวนของคุณกำลังแข็งแรง',
@@ -27,7 +30,8 @@ const heroFocus = {
   ],
 };
 
-const quickMetrics = [
+// Removed quickMetrics - now using dynamicMetrics
+const _unused_quickMetrics = [
   {
     id: 'metric-activity',
     label: 'กิจกรรมสัปดาห์นี้',
@@ -164,7 +168,103 @@ const quickFacts = [
 
 export default function InsightsScreen() {
   const { theme } = useTheme();
+  const plants = useGardenStore((state) => state.plants);
+  const stats = useGardenStore((state) => state.stats);
   const styles = useMemo(() => createStyles(theme), [theme]);
+
+  // State for insights data
+  const [activityData, setActivityData] = useState<ActivityFrequencyData[] | null>(null);
+  const [engagementData, setEngagementData] = useState<EngagementMetrics | null>(null);
+  const [productivityData, setProductivityData] = useState<ProductivityScore | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load insights data
+  useEffect(() => {
+    const loadInsights = async () => {
+      try {
+        setIsLoading(true);
+
+        // Load various insights
+        const [activityResult] = await Promise.all([
+          insightsActions.getActivityPatterns(),
+        ]);
+
+        // Note: engagementMetrics and productivityScore not yet implemented in actions
+        const engagementResult = { success: false, data: null };
+        const productivityResult = { success: false, data: null };
+
+        if (activityResult.success && activityResult.data) setActivityData(activityResult.data);
+        if (engagementResult.success && engagementResult.data) setEngagementData(engagementResult.data);
+        if (productivityResult.success && productivityResult.data) setProductivityData(productivityResult.data);
+      } catch (error) {
+        console.error('Failed to load insights:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadInsights();
+  }, []);
+
+  // Calculate dynamic hero data
+  const heroData = useMemo(() => {
+    const totalPlants = stats?.totalPlants || plants.length || 0;
+    const healthyCount = stats?.healthyCount || 0;
+    const criticalCount = stats?.criticalCount || 0;
+    const warningCount = stats?.warningCount || 0;
+
+    const healthScore = totalPlants > 0 ? Math.round((healthyCount / totalPlants) * 100) : 0;
+    const attentionNeeded = criticalCount + warningCount;
+
+    return {
+      title: healthScore >= 80 ? 'สวนของคุณกำลังแข็งแรง' :
+             healthScore >= 60 ? 'สวนของคุณมีสุขภาพดี' : 'สวนต้องการความดูแล',
+      caption: `คะแนนสุขภาพเฉลี่ย ${healthScore} / 100 · ${attentionNeeded > 0 ? `ตรวจพบต้นไม้ที่ควรเฝ้าดู ${attentionNeeded} ต้น` : 'ทุกต้นมีสุขภาพดี'}`,
+      activityChange: engagementData?.appUsage?.weeklyActiveTime ? '+14%' : 'ไม่มีข้อมูล',
+      pendingTasks: attentionNeeded,
+    };
+  }, [stats, plants, engagementData]);
+
+  // Calculate dynamic metrics
+  const dynamicMetrics = useMemo(() => {
+    const totalPlants = stats?.totalPlants || plants.length || 0;
+    const healthyCount = stats?.healthyCount || 0;
+
+    // Calculate weekly activities (using totalCount from activity data)
+    const weeklyActivities = activityData ? activityData.reduce((sum, activity) => sum + activity.totalCount, 0) : 27;
+
+    return [
+      {
+        id: 'metric-activity',
+        label: 'กิจกรรมสัปดาห์นี้',
+        value: `${weeklyActivities} ครั้ง`,
+        change: engagementData ? '+14% จากค่าเฉลี่ย' : 'กำลังโหลด...',
+        Icon: Activity,
+        trend: [10, 12, 13, 16, 17, 21, 18], // Mock trend data
+      },
+      {
+        id: 'metric-moisture',
+        label: 'ความชื้นเฉลี่ย',
+        value: '58%', // Should come from sensor data
+        change: 'อยู่ในช่วงเหมาะสม',
+        Icon: Droplet,
+      },
+      {
+        id: 'metric-health',
+        label: 'ต้นไม้สุขภาพดี',
+        value: `${healthyCount} / ${totalPlants}`,
+        change: stats?.recentlyAdded ? `+${stats.recentlyAdded} ต้นจากสัปดาห์ก่อน` : 'ไม่มีการเปลี่ยนแปลง',
+        Icon: Leaf,
+      },
+      {
+        id: 'metric-temperature',
+        label: 'อุณหภูมิเฉลี่ย',
+        value: '26°C', // Should come from weather data
+        change: 'เหมาะสำหรับพืช',
+        Icon: ThermometerSun,
+      },
+    ];
+  }, [stats, plants, activityData, engagementData]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -185,16 +285,18 @@ export default function InsightsScreen() {
               <Text style={styles.heroAction}>ดูรายงานเต็ม</Text>
             </View>
 
-            <Text style={styles.heroTitle}>{heroFocus.title}</Text>
-            <Text style={styles.heroCaption}>{heroFocus.caption}</Text>
+            <Text style={styles.heroTitle}>{heroData.title}</Text>
+            <Text style={styles.heroCaption}>{heroData.caption}</Text>
 
             <View style={styles.heroSplitRow}>
-              {heroFocus.highlight.map(({ Icon, text }) => (
-                <View key={text} style={styles.heroHighlightCard}>
-                  <Icon size={14} color={theme.colors.primary} />
-                  <Text style={styles.heroHighlightText}>{text}</Text>
-                </View>
-              ))}
+              <View style={styles.heroHighlightCard}>
+                <TrendingUp size={14} color={theme.colors.primary} />
+                <Text style={styles.heroHighlightText}>กิจกรรมเพิ่มขึ้น {heroData.activityChange}</Text>
+              </View>
+              <View style={styles.heroHighlightCard}>
+                <CalendarClock size={14} color={theme.colors.primary} />
+                <Text style={styles.heroHighlightText}>งานค้าง {heroData.pendingTasks} รายการ</Text>
+              </View>
             </View>
           </View>
         </View>
@@ -205,7 +307,7 @@ export default function InsightsScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.kpiStrip}
         >
-          {quickMetrics.map(({ id, label, value, change, Icon, trend }) => (
+          {dynamicMetrics.map(({ id, label, value, change, Icon, trend }) => (
             <View key={id} style={styles.kpiCard}>
               <View style={styles.kpiIconWrap}>
                 <Icon size={18} color={theme.colors.primary} />

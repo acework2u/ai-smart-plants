@@ -121,6 +121,11 @@ interface InsightsActions {
   precomputeInsights: (plantIds?: string[]) => Promise<void>;
   optimizeCache: () => Promise<void>;
 
+  // Internal cache methods
+  getCachedInsight: <T = any>(key: string) => InsightCacheEntry<T> | null;
+  cacheInsight: <T = any>(key: string, response: InsightResponse<T>, request: InsightRequest) => void;
+  createCachedResponse: <T = any>(cached: InsightCacheEntry<T>, requestType: string) => InsightResponse<T>;
+
   // Background processing
   startBackgroundTasks: () => void;
   stopBackgroundTasks: () => void;
@@ -202,7 +207,15 @@ export const useInsightsStore = create<InsightsState & InsightsActions>()(
           if (cached) {
             get().recordPerformance(Date.now() - startTime, true);
             return {
-              ...cached,
+              success: true,
+              data: cached.data,
+              metadata: {
+                type: request.type,
+                confidence: 1.0,
+                sampleSize: 1,
+                lastComputed: cached.generatedAt,
+                computationCost: 'low' as const,
+              },
               cached: true,
               computationTime: Date.now() - startTime,
             };
@@ -301,7 +314,7 @@ export const useInsightsStore = create<InsightsState & InsightsActions>()(
 
         if (!forceRefresh) {
           const cached = get().getCachedInsight<HealthDeclinePrediction>(cacheKey);
-          if (cached) return { ...cached, cached: true, computationTime: 0 };
+          if (cached) return get().createCachedResponse(cached, 'health_prediction');
         }
 
         const result = await insightsService.predictHealthDecline(plantId);
@@ -316,7 +329,7 @@ export const useInsightsStore = create<InsightsState & InsightsActions>()(
 
         if (!forceRefresh) {
           const cached = get().getCachedInsight<PlantHealthReport>(cacheKey);
-          if (cached) return { ...cached, cached: true, computationTime: 0 };
+          if (cached) return get().createCachedResponse(cached, 'health_report');
         }
 
         const result = await insightsService.generateHealthReport(plantId);
@@ -345,7 +358,7 @@ export const useInsightsStore = create<InsightsState & InsightsActions>()(
 
         if (!forceRefresh) {
           const cached = get().getCachedInsight<EngagementMetrics>(cacheKey);
-          if (cached) return { ...cached, cached: true, computationTime: 0 };
+          if (cached) return get().createCachedResponse(cached, 'engagement_metrics');
         }
 
         const result = await insightsService.getEngagementMetrics();
@@ -360,7 +373,7 @@ export const useInsightsStore = create<InsightsState & InsightsActions>()(
 
         if (!forceRefresh) {
           const cached = get().getCachedInsight<ProductivityScore>(cacheKey);
-          if (cached) return { ...cached, cached: true, computationTime: 0 };
+          if (cached) return get().createCachedResponse(cached, 'productivity_score');
         }
 
         const result = await insightsService.getProductivityScore();
@@ -390,7 +403,7 @@ export const useInsightsStore = create<InsightsState & InsightsActions>()(
 
         if (!forceRefresh) {
           const cached = get().getCachedInsight<BenchmarkData[]>(cacheKey);
-          if (cached) return { ...cached, cached: true, computationTime: 0 };
+          if (cached) return get().createCachedResponse(cached, 'benchmarks');
         }
 
         const result = await insightsService.getBenchmarkData();
@@ -405,7 +418,7 @@ export const useInsightsStore = create<InsightsState & InsightsActions>()(
 
         if (!forceRefresh) {
           const cached = get().getCachedInsight<ImprovementArea[]>(cacheKey);
-          if (cached) return { ...cached, cached: true, computationTime: 0 };
+          if (cached) return get().createCachedResponse(cached, 'improvement_areas');
         }
 
         const result = await insightsService.getImprovementAreas();
@@ -429,7 +442,7 @@ export const useInsightsStore = create<InsightsState & InsightsActions>()(
 
         if (!forceRefresh) {
           const cached = get().getCachedInsight<T>(cacheKey);
-          if (cached) return { ...cached, cached: true, computationTime: 0 };
+          if (cached) return get().createCachedResponse(cached, 'chart_data');
         }
 
         const result = await insightsService.generateChartData(chartType, dataType, plantId) as InsightResponse<T>;
@@ -530,6 +543,42 @@ export const useInsightsStore = create<InsightsState & InsightsActions>()(
           }
 
           draft.performance.lastOptimization = now;
+        });
+      },
+
+      // Internal cache methods
+      getCachedInsight: <T = any>(key: string): InsightCacheEntry<T> | null => {
+        const cache = get().cache;
+        const entry = cache[key];
+        if (!entry) return null;
+
+        // Check if expired
+        if (entry.expiresAt < new Date()) {
+          // Remove expired entry
+          set((state) => {
+            delete state.cache[key];
+          });
+          return null;
+        }
+
+        return entry as InsightCacheEntry<T>;
+      },
+
+      cacheInsight: <T = any>(key: string, response: InsightResponse<T>, request: InsightRequest) => {
+        const { config } = get();
+        const now = new Date();
+        const ttl = config.defaultCacheTTL;
+
+        set((state) => {
+          state.cache[key] = {
+            key,
+            data: response.data,
+            generatedAt: now,
+            expiresAt: new Date(now.getTime() + ttl),
+            dependencies: [request.type + '_data', 'plant_data'],
+            computationTime: 0,
+            version: '1.0',
+          };
         });
       },
 
@@ -735,68 +784,26 @@ export const useInsightsStore = create<InsightsState & InsightsActions>()(
         });
       },
 
-      // ============================================================================
-      // UTILITY METHODS (PRIVATE)
-      // ============================================================================
-
-      getCachedInsight: <T = any>(key: string): InsightResponse<T> | null => {
-        const entry = get().cache[key];
-        if (!entry) return null;
-
-        const now = new Date();
-        if (entry.expiresAt < now) {
-          // Remove expired entry
-          set((state) => {
-            delete state.cache[key];
-          });
-          return null;
-        }
-
+      // Helper method to convert cached entry to InsightResponse
+      createCachedResponse: <T = any>(cached: InsightCacheEntry<T>, requestType: string): InsightResponse<T> => {
         return {
           success: true,
-          data: entry.data as T,
+          data: cached.data,
           metadata: {
-            type: key.split('_')[0],
+            type: requestType,
             confidence: 1.0,
             sampleSize: 1,
-            lastComputed: entry.generatedAt,
+            lastComputed: cached.generatedAt,
             computationCost: 'low' as const,
           },
           cached: true,
-          computationTime: entry.computationTime,
+          computationTime: 0,
         };
       },
 
-      cacheInsight: <T = any>(key: string, response: InsightResponse<T>, request: InsightRequest) => {
-        if (!response.success || !response.data) return;
-
-        const { config } = get();
-        const now = new Date();
-        const ttl = config.defaultCacheTTL;
-
-        // Determine dependencies based on insight type
-        const dependencies = getDependencies(request);
-
-        const entry: InsightCacheEntry<T> = {
-          key,
-          data: response.data,
-          generatedAt: now,
-          expiresAt: new Date(now.getTime() + ttl),
-          dependencies,
-          computationTime: response.computationTime || 0,
-          version: '1.0',
-        };
-
-        set((state) => {
-          state.cache[key] = entry;
-        });
-
-        // Trigger cache optimization if needed
-        const cacheSize = Object.keys(get().cache).length;
-        if (cacheSize > config.maxCacheSize * 1.1) {
-          setTimeout(() => get().optimizeCache(), 0);
-        }
-      },
+      // ============================================================================
+      // UTILITY METHODS (PRIVATE)
+      // ============================================================================
 
       // ============================================================================
       // UTILITY ACTIONS
@@ -840,16 +847,23 @@ export const useInsightsStore = create<InsightsState & InsightsActions>()(
 // ============================================================================
 
 function generateCacheKey(request: InsightRequest): string {
-  const parts = [request.type];
+  const parts: string[] = [request.type];
 
-  if (request.plantId) parts.push(`plant_${request.plantId}`);
-  if (request.timeRange) parts.push(`time_${request.timeRange}`);
+  if (request.plantId) {
+    parts.push('plant');
+    parts.push(request.plantId);
+  }
+  if (request.timeRange) {
+    parts.push('time');
+    parts.push(request.timeRange);
+  }
   if (request.parameters) {
+    parts.push('params');
     const paramString = Object.entries(request.parameters)
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([key, value]) => `${key}_${value}`)
+      .map(([key, value]) => key + '_' + value)
       .join('_');
-    parts.push(`params_${paramString}`);
+    parts.push(paramString);
   }
 
   return parts.join('_');
