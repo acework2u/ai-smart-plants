@@ -395,6 +395,11 @@ export const useFilteredPlants = () => {
   return result;
 };
 
+// Get all plants without any filtering - useful for showing total counts
+export const useAllPlants = () => {
+  return useGardenStore((state) => state.plants);
+};
+
 export const usePlantById = (id: string | null) => {
   return useGardenStore(
     (state) => id ? state.plants.find(p => p.id === id) || null : null

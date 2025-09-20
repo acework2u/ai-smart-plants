@@ -1,51 +1,50 @@
-import React, { useMemo, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  SafeAreaView,
-  TextInput,
-  TouchableOpacity,
-  Image,
-  ScrollView,
-  ActivityIndicator,
-  Animated,
-} from 'react-native';
 import { router } from 'expo-router';
 import {
-  Leaf,
-  Plus,
-  Search,
-  Columns2,
-  Rows3,
+  AlertTriangle,
   ArrowDownWideNarrow,
   ArrowUp,
-  Filter,
-  X,
   Calendar,
-  Clock,
-  TrendingUp,
-  TrendingDown,
-  Heart,
-  AlertTriangle,
   CheckCircle,
-  Droplets,
-  Sun,
+  Clock,
+  Columns2,
+  Filter,
+  Heart,
+  Leaf,
+  Plus,
+  Rows3,
+  Search,
+  TrendingDown,
+  TrendingUp,
+  X
 } from 'lucide-react-native';
+import React, { useCallback, useMemo } from 'react';
+import {
+  ActivityIndicator,
+  Animated,
+  Image,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { Button, Chip } from '../../components/atoms';
 import { OptimizedFlatList } from '../../components/atoms/OptimizedFlatList';
 import { PlantCardSkeleton, Skeleton } from '../../components/atoms/Skeleton';
-import {
-  useGardenStore,
-  useFilteredPlants,
-  useGardenStats,
-} from '../../stores/garden';
-import { colors, getSpacing, typography, radius } from '../../core/theme';
 import { useTheme } from '../../contexts/ThemeContext';
-import { MemoryManager } from '../../utils/performance';
+import { getSpacing, radius, typography } from '../../core/theme';
+import {
+  useFilteredPlants,
+  useAllPlants,
+  useGardenStats,
+  useGardenStore,
+} from '../../stores/garden';
 
 export default function GardenScreen() {
-  const plants = useFilteredPlants();
+  const plants = useFilteredPlants(); // Filtered plants for display
+  const allPlants = useAllPlants(); // All plants for counting
   const [searchQuery, setSearchQueryLocal] = React.useState('');
   const [refreshing, setRefreshing] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(true);
@@ -99,10 +98,11 @@ export default function GardenScreen() {
   }, [fadeAnim]);
 
   const heroStats = useMemo(() => {
-    const total = stats?.totalPlants ?? plants.length;
-    const healthy = stats?.healthyCount ?? plants.filter((p) => p.status === 'Healthy').length;
-    const warning = stats?.warningCount ?? plants.filter((p) => p.status === 'Warning').length;
-    const critical = stats?.criticalCount ?? plants.filter((p) => p.status === 'Critical').length;
+    // Use allPlants for accurate total counts
+    const total = stats?.totalPlants ?? allPlants.length;
+    const healthy = stats?.healthyCount ?? allPlants.filter((p) => p.status === 'Healthy').length;
+    const warning = stats?.warningCount ?? allPlants.filter((p) => p.status === 'Warning').length;
+    const critical = stats?.criticalCount ?? allPlants.filter((p) => p.status === 'Critical').length;
     return {
       total,
       healthy,
@@ -110,60 +110,20 @@ export default function GardenScreen() {
       critical,
       attention: warning + critical,
     };
-  }, [plants, stats]);
+  }, [allPlants, stats]);
 
-  // Enhanced filter counts with date and activity filters
+  // Filter counts - always show total counts regardless of active filters
+  // This provides better UX by showing the full picture of garden status
   const filterCounts = useMemo(() => {
-    let filteredPlants = [...plants];
-
-    // Apply date filter
-    if (dateFilter !== 'all') {
-      const now = new Date();
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-      filteredPlants = filteredPlants.filter((plant) => {
-        const plantDate = new Date(plant.createdAt);
-
-        switch (dateFilter) {
-          case 'today':
-            return plantDate >= today;
-          case 'week':
-            const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-            return plantDate >= weekAgo;
-          case 'month':
-            const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
-            return plantDate >= monthAgo;
-          default:
-            return true;
-        }
-      });
-    }
-
-    // Apply activity filter
-    if (activityFilter !== 'all') {
-      filteredPlants = filteredPlants.filter((plant) => {
-        if (activityFilter === 'recent') {
-          return plant.metadata?.lastActivity;
-        } else if (activityFilter === 'overdue') {
-          // Plants that haven't been watered in 7+ days (example logic)
-          const lastWatered = plant.metadata?.lastWatered;
-          if (lastWatered && typeof lastWatered === 'string') {
-            const daysSince = (Date.now() - new Date(lastWatered).getTime()) / (1000 * 60 * 60 * 24);
-            return daysSince > 7;
-          }
-          return false;
-        }
-        return true;
-      });
-    }
-
+    // Always count from allPlants (unfiltered) to show total counts
+    // This helps users understand the overall garden status even when filtering
     return {
-      all: filteredPlants.length,
-      healthy: filteredPlants.filter((p) => p.status === 'Healthy').length,
-      warning: filteredPlants.filter((p) => p.status === 'Warning').length,
-      critical: filteredPlants.filter((p) => p.status === 'Critical').length,
+      all: allPlants.length,
+      healthy: allPlants.filter((p) => p.status === 'Healthy').length,
+      warning: allPlants.filter((p) => p.status === 'Warning').length,
+      critical: allPlants.filter((p) => p.status === 'Critical').length,
     };
-  }, [plants, dateFilter, activityFilter]);
+  }, [allPlants]);
 
   const handlePlantPress = useCallback((plantId: string) => {
     router.push(`/plant/${plantId}`);
