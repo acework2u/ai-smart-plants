@@ -9,6 +9,7 @@ import {
   Image,
   ScrollView,
   ActivityIndicator,
+  Animated,
 } from 'react-native';
 import { router } from 'expo-router';
 import {
@@ -23,6 +24,13 @@ import {
   X,
   Calendar,
   Clock,
+  TrendingUp,
+  TrendingDown,
+  Heart,
+  AlertTriangle,
+  CheckCircle,
+  Droplets,
+  Sun,
 } from 'lucide-react-native';
 import { Button, Chip } from '../../components/atoms';
 import { OptimizedFlatList } from '../../components/atoms/OptimizedFlatList';
@@ -60,6 +68,10 @@ export default function GardenScreen() {
   // Ref for FlatList to handle scroll to top
   const listRef = React.useRef<any>(null);
 
+  // Animation values for micro-interactions
+  const pulseAnim = React.useRef(new Animated.Value(1)).current;
+  const fadeAnim = React.useRef(new Animated.Value(0)).current;
+
   const { theme } = useTheme();
   const setSearchQuery = useGardenStore((s) => s.setSearchQuery);
   const setFilter = useGardenStore((s) => s.setFilter);
@@ -71,6 +83,12 @@ export default function GardenScreen() {
       try {
         await new Promise((resolve) => setTimeout(resolve, 1200));
         setIsLoading(false);
+        // Fade in animation when data loads
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+        }).start();
       } catch (error) {
         console.error('Failed to load garden data:', error);
         setIsLoading(false);
@@ -78,7 +96,7 @@ export default function GardenScreen() {
     };
 
     loadGardenData();
-  }, []);
+  }, [fadeAnim]);
 
   const heroStats = useMemo(() => {
     const total = stats?.totalPlants ?? plants.length;
@@ -312,6 +330,56 @@ export default function GardenScreen() {
     return `${labels[filter as keyof typeof labels] || filter} (${count})`;
   }, []);
 
+  // Enhanced hero calculations
+  const gardenHealth = useMemo(() => {
+    const total = heroStats.total || 1;
+    const healthyPercent = Math.round((heroStats.healthy / total) * 100);
+    const status = healthyPercent >= 80 ? 'excellent' : healthyPercent >= 60 ? 'good' : healthyPercent >= 40 ? 'fair' : 'poor';
+
+    return {
+      percentage: healthyPercent,
+      status,
+      trend: healthyPercent >= 70 ? 'up' : 'down', // Mock trend for demo
+      icon: healthyPercent >= 80 ? CheckCircle : healthyPercent >= 60 ? Heart : AlertTriangle,
+      color: healthyPercent >= 80 ? theme.colors.success : healthyPercent >= 60 ? theme.colors.primary : theme.colors.warning
+    };
+  }, [heroStats, theme.colors]);
+
+  const getGreeting = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'สวัสดีตอนเช้า';
+    if (hour < 18) return 'สวัสดีตอนบ่าย';
+    return 'สวัสดีตอนเย็น';
+  }, []);
+
+  const getQuickAction = useCallback(() => {
+    if (heroStats.critical > 0) return { title: 'ช่วยด่วน!', subtitle: `${heroStats.critical} ต้นต้องการความช่วยเหลือ`, action: 'critical' };
+    if (heroStats.warning > 0) return { title: 'ติดตาม', subtitle: `${heroStats.warning} ต้นต้องการความใส่ใจ`, action: 'warning' };
+    return { title: 'ดูแลต่อ', subtitle: 'สวนของคุณสุขภาพดี', action: 'maintain' };
+  }, [heroStats]);
+
+  // Pulse animation for urgent actions
+  React.useEffect(() => {
+    if (heroStats.critical > 0 || heroStats.warning > 0) {
+      const pulse = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      pulse.start();
+      return () => pulse.stop();
+    }
+  }, [heroStats.critical, heroStats.warning, pulseAnim]);
+
   const listCardTheme = useMemo(
     () => ({
       backgroundColor: theme.colors.surface.primary,
@@ -489,30 +557,124 @@ export default function GardenScreen() {
 
   const listHeader = useMemo(() => (
     <View>
-      <View style={[styles.header, { backgroundColor: theme.colors.surface.primary, borderBottomColor: theme.colors.border }]}>
-        <View style={styles.heroHeaderRow}>
-          <View>
+      {/* Enhanced Hero Section */}
+      <View style={[styles.enhancedHeader, { backgroundColor: theme.colors.surface.primary }]}>
+        {/* Greeting and Quick Action */}
+        <View style={styles.greetingSection}>
+          <View style={styles.greetingContent}>
+            <Text style={[styles.greetingText, { color: theme.colors.text.tertiary }]}>{getGreeting}</Text>
             <Text style={[styles.heroTitle, { color: theme.colors.text.primary }]}>สวนของฉัน</Text>
-            <Text style={[styles.heroSubtitle, { color: theme.colors.text.secondary }]}>
-              ต้นไม้ทั้งหมด {heroStats.total} ต้น · ต้องดูแล {heroStats.attention} ต้น
-            </Text>
           </View>
-          <Button title="เพิ่ม" onPress={handleAddPlant} variant="primary" size="sm" />
+          <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+            <TouchableOpacity
+              style={[styles.quickActionButton, { backgroundColor: gardenHealth.color + '15' }]}
+              onPress={() => {
+                const action = getQuickAction();
+                if (action.action === 'critical') setFilter('Critical');
+                else if (action.action === 'warning') setFilter('Warning');
+              }}
+              activeOpacity={0.8}
+            >
+              <gardenHealth.icon size={16} color={gardenHealth.color} />
+            </TouchableOpacity>
+          </Animated.View>
         </View>
-        <View style={styles.heroMetrics}>
-          <View style={[styles.heroMetricCard, { backgroundColor: theme.colors.gray100 }]}>
-            <Text style={[styles.heroMetricValue, { color: theme.colors.text.primary }]}>{heroStats.total}</Text>
-            <Text style={[styles.heroMetricLabel, { color: theme.colors.text.secondary }]}>ต้นทั้งหมด</Text>
+
+        {/* Garden Health Score */}
+        <View style={[styles.healthScoreCard, { backgroundColor: theme.colors.gray100 }]}>
+          <View style={styles.healthScoreHeader}>
+            <View style={styles.healthScoreInfo}>
+              <Text style={[styles.healthScoreTitle, { color: theme.colors.text.primary }]}>สุขภาพสวน</Text>
+              <View style={styles.healthScoreTrend}>
+                <Text style={[styles.healthScorePercent, { color: gardenHealth.color }]}>
+                  {gardenHealth.percentage}%
+                </Text>
+                {gardenHealth.trend === 'up' ? (
+                  <TrendingUp size={14} color={theme.colors.success} />
+                ) : (
+                  <TrendingDown size={14} color={theme.colors.warning} />
+                )}
+              </View>
+            </View>
+            <gardenHealth.icon size={24} color={gardenHealth.color} />
           </View>
-          <View style={[styles.heroMetricCard, { backgroundColor: theme.colors.gray100 }]}>
-            <Text style={[styles.heroMetricValue, { color: theme.colors.text.primary }]}>{heroStats.healthy}</Text>
-            <Text style={[styles.heroMetricLabel, { color: theme.colors.text.secondary }]}>สุขภาพดี</Text>
+
+          {/* Health Progress Bar */}
+          <View style={[styles.healthProgressBg, { backgroundColor: theme.colors.background }]}>
+            <View
+              style={[
+                styles.healthProgress,
+                {
+                  backgroundColor: gardenHealth.color,
+                  width: `${gardenHealth.percentage}%`
+                }
+              ]}
+            />
           </View>
-          <View style={[styles.heroMetricCard, { backgroundColor: theme.colors.gray100 }]}>
-            <Text style={[styles.heroMetricValue, { color: theme.colors.text.primary }]}>{heroStats.attention}</Text>
-            <Text style={[styles.heroMetricLabel, { color: theme.colors.text.secondary }]}>ต้องติดตาม</Text>
-          </View>
+
+          <Text style={[styles.healthScoreSubtitle, { color: theme.colors.text.secondary }]}>
+            {getQuickAction().subtitle}
+          </Text>
         </View>
+
+        {/* Enhanced Metrics Grid */}
+        <Animated.View style={[styles.enhancedMetrics, { opacity: fadeAnim }]}>
+          <TouchableOpacity
+            style={[styles.enhancedMetricCard, { backgroundColor: theme.colors.success + '10' }]}
+            onPress={() => setFilter('Healthy')}
+            activeOpacity={0.8}
+          >
+            <View style={styles.metricCardHeader}>
+              <CheckCircle size={20} color={theme.colors.success} />
+              <Text style={[styles.metricCardValue, { color: theme.colors.success }]}>
+                {heroStats.healthy}
+              </Text>
+            </View>
+            <Text style={[styles.metricCardLabel, { color: theme.colors.text.secondary }]}>แข็งแรง</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.enhancedMetricCard, { backgroundColor: theme.colors.warning + '10' }]}
+            onPress={() => setFilter('Warning')}
+            activeOpacity={0.8}
+          >
+            <View style={styles.metricCardHeader}>
+              <AlertTriangle size={20} color={theme.colors.warning} />
+              <Text style={[styles.metricCardValue, { color: theme.colors.warning }]}>
+                {heroStats.warning}
+              </Text>
+            </View>
+            <Text style={[styles.metricCardLabel, { color: theme.colors.text.secondary }]}>เตือน</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.enhancedMetricCard, { backgroundColor: theme.colors.error + '10' }]}
+            onPress={() => setFilter('Critical')}
+            activeOpacity={0.8}
+          >
+            <View style={styles.metricCardHeader}>
+              <Heart size={20} color={theme.colors.error} />
+              <Text style={[styles.metricCardValue, { color: theme.colors.error }]}>
+                {heroStats.critical}
+              </Text>
+            </View>
+            <Text style={[styles.metricCardLabel, { color: theme.colors.text.secondary }]}>วิกฤต</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.enhancedMetricCard, { backgroundColor: theme.colors.primary + '10' }]}
+            onPress={handleAddPlant}
+            activeOpacity={0.8}
+          >
+            <View style={styles.metricCardHeader}>
+              <Plus size={20} color={theme.colors.primary} />
+              <Text style={[styles.metricCardValue, { color: theme.colors.primary }]}>
+                {heroStats.total}
+              </Text>
+            </View>
+            <Text style={[styles.metricCardLabel, { color: theme.colors.text.secondary }]}>ทั้งหมด</Text>
+          </TouchableOpacity>
+        </Animated.View>
       </View>
 
       <View style={[styles.controlCard, {
@@ -743,6 +905,8 @@ export default function GardenScreen() {
     heroStats.attention,
     heroStats.healthy,
     heroStats.total,
+    heroStats.warning,
+    heroStats.critical,
     isSearching,
     searchQuery,
     setFilter,
@@ -754,6 +918,11 @@ export default function GardenScreen() {
     theme.colors.text.primary,
     theme.colors.text.secondary,
     theme.colors.text.tertiary,
+    theme.colors.background,
+    theme.colors.success,
+    theme.colors.warning,
+    theme.colors.error,
+    theme.colors.white,
     viewMode,
     viewToggleActiveBg,
     viewToggleInactiveBg,
@@ -764,7 +933,11 @@ export default function GardenScreen() {
     hasActiveFilters,
     filterCounts,
     getFilterTitle,
-    clearAllFilters
+    clearAllFilters,
+    // Enhanced hero deps
+    gardenHealth,
+    getGreeting,
+    getQuickAction
   ]);
 
   if (isLoading) {
@@ -827,6 +1000,96 @@ const styles = StyleSheet.create({
     paddingTop: getSpacing(4),
     paddingBottom: getSpacing(3),
     borderBottomWidth: 1,
+  },
+  enhancedHeader: {
+    paddingHorizontal: getSpacing(4),
+    paddingTop: getSpacing(6),
+    paddingBottom: getSpacing(4),
+    gap: getSpacing(4),
+  },
+  greetingSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  greetingContent: {
+    flex: 1,
+  },
+  greetingText: {
+    fontSize: typography.fontSize.sm,
+    fontFamily: typography.fontFamily.medium,
+    marginBottom: getSpacing(0.5),
+  },
+  quickActionButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  healthScoreCard: {
+    padding: getSpacing(4),
+    borderRadius: radius.xl,
+    gap: getSpacing(3),
+  },
+  healthScoreHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  healthScoreInfo: {
+    flex: 1,
+  },
+  healthScoreTitle: {
+    fontSize: typography.fontSize.lg,
+    fontFamily: typography.fontFamily.semibold,
+    marginBottom: getSpacing(1),
+  },
+  healthScoreTrend: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: getSpacing(1),
+  },
+  healthScorePercent: {
+    fontSize: typography.fontSize['2xl'],
+    fontFamily: typography.fontFamily.bold,
+  },
+  healthProgressBg: {
+    height: 6,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  healthProgress: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  healthScoreSubtitle: {
+    fontSize: typography.fontSize.sm,
+    fontFamily: typography.fontFamily.regular,
+  },
+  enhancedMetrics: {
+    flexDirection: 'row',
+    gap: getSpacing(2),
+  },
+  enhancedMetricCard: {
+    flex: 1,
+    padding: getSpacing(3),
+    borderRadius: radius.lg,
+    gap: getSpacing(2),
+  },
+  metricCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  metricCardValue: {
+    fontSize: typography.fontSize.xl,
+    fontFamily: typography.fontFamily.bold,
+  },
+  metricCardLabel: {
+    fontSize: typography.fontSize.xs,
+    fontFamily: typography.fontFamily.medium,
+    textAlign: 'center',
   },
   heroHeaderRow: {
     flexDirection: 'row',
