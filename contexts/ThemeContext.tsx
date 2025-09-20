@@ -11,7 +11,13 @@ export interface ThemeColors {
   primarySoft: string;
 
   // Background colors
-  background: string;
+  background: {
+    primary: string;
+    secondary: string;
+    tertiary: string;
+    overlay: string;
+    overlayLight: string;
+  };
   card: string;
 
   // Surface variants
@@ -62,15 +68,6 @@ export interface ThemeColors {
   // Interactive elements
   ripple: string;
   overlay: string;
-
-  // Background variants
-  background: {
-    primary: string;
-    secondary: string;
-    tertiary: string;
-    overlay: string;
-    overlayLight: string;
-  };
 }
 
 export interface Theme {

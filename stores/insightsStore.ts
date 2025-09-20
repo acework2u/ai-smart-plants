@@ -1004,6 +1004,10 @@ export const insightsActions = {
     useInsightsStore.getState().getHealthTrends(plantId, forceRefresh),
   getHealthReport: (plantId: string, forceRefresh = false) =>
     useInsightsStore.getState().getHealthReport(plantId, forceRefresh),
+  getEngagementMetrics: (forceRefresh = false) =>
+    useInsightsStore.getState().getEngagementMetrics(forceRefresh),
+  getProductivityScore: (forceRefresh = false) =>
+    useInsightsStore.getState().getProductivityScore(forceRefresh),
   getPersonalizedTips: (plantId?: string, forceRefresh = false) =>
     useInsightsStore.getState().getPersonalizedTips(plantId, forceRefresh),
   getChartData: <T = any>(chartType: 'line' | 'bar' | 'pie', dataType: string, plantId?: string, forceRefresh = false) =>

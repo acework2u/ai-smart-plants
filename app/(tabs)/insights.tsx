@@ -19,7 +19,8 @@ import { getSpacing, radius, typography } from '../../core/theme';
 import { useTheme, type Theme } from '../../contexts/ThemeContext';
 import { useGardenStore } from '../../stores/garden';
 import { insightsActions } from '../../stores/insightsStore';
-import type { ActivityFrequencyData, EngagementMetrics, ProductivityScore } from '../../types';
+import { useWeatherStore } from '../../stores/weatherStore';
+import type { ActivityFrequencyData, EngagementMetrics, ProductivityScore, PersonalizedTip } from '../../types';
 
 const heroFocus = {
   title: 'สวนของคุณกำลังแข็งแรง',
@@ -112,23 +113,7 @@ const healthSnapshot = [
   },
 ];
 
-const aiAdvice = [
-  {
-    id: 'tip-1',
-    title: 'ปรับตำแหน่งรับแสง',
-    body: 'กลุ่มสมุนไพรได้รับแสงเช้าไม่เท่ากัน หมุนกระถางทุก 2 วันเพื่อให้ยอดเติบโตสมดุล',
-  },
-  {
-    id: 'tip-2',
-    title: 'เพิ่มความชื้นให้เฟิร์น',
-    body: 'ความชื้นเฉลี่ย 45% แนะนำพ่นละอองน้ำตอนเช้าและวางถาดรองน้ำเพื่อรักษาความชื้น',
-  },
-  {
-    id: 'tip-3',
-    title: 'พักการให้น้ำ Succulent',
-    body: 'อุณหภูมิลดลงเหลือ 22°C ควรเว้นการให้น้ำ 1-2 วันเพื่อป้องกันรากเน่า',
-  },
-];
+// Removed aiAdvice mock data - now using real personalized tips
 
 const microClimateInsights = [
   {
@@ -170,12 +155,14 @@ export default function InsightsScreen() {
   const { theme } = useTheme();
   const plants = useGardenStore((state) => state.plants);
   const stats = useGardenStore((state) => state.stats);
+  const weather = useWeatherStore((state) => state.currentWeather);
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   // State for insights data
   const [activityData, setActivityData] = useState<ActivityFrequencyData[] | null>(null);
   const [engagementData, setEngagementData] = useState<EngagementMetrics | null>(null);
   const [productivityData, setProductivityData] = useState<ProductivityScore | null>(null);
+  const [personalizedTips, setPersonalizedTips] = useState<PersonalizedTip[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Load insights data
@@ -184,18 +171,18 @@ export default function InsightsScreen() {
       try {
         setIsLoading(true);
 
-        // Load various insights
-        const [activityResult] = await Promise.all([
+        // Load various insights including engagement metrics and personalized tips
+        const [activityResult, engagementResult, productivityResult, tipsResult] = await Promise.all([
           insightsActions.getActivityPatterns(),
+          insightsActions.getEngagementMetrics(),
+          insightsActions.getProductivityScore(),
+          insightsActions.getPersonalizedTips(),
         ]);
-
-        // Note: engagementMetrics and productivityScore not yet implemented in actions
-        const engagementResult = { success: false, data: null };
-        const productivityResult = { success: false, data: null };
 
         if (activityResult.success && activityResult.data) setActivityData(activityResult.data);
         if (engagementResult.success && engagementResult.data) setEngagementData(engagementResult.data);
         if (productivityResult.success && productivityResult.data) setProductivityData(productivityResult.data);
+        if (tipsResult.success && tipsResult.data) setPersonalizedTips(tipsResult.data);
       } catch (error) {
         console.error('Failed to load insights:', error);
       } finally {
@@ -206,6 +193,35 @@ export default function InsightsScreen() {
     loadInsights();
   }, []);
 
+  // Real-time data sync - reload insights when garden data changes
+  useEffect(() => {
+    const refreshInsights = async () => {
+      if (plants.length > 0) {
+        // Notify insights store about data changes
+        insightsActions.updateDependency('plantData');
+
+        // Refresh insights with new data
+        try {
+          const [activityResult, engagementResult] = await Promise.all([
+            insightsActions.getActivityPatterns(undefined, true), // force refresh
+            insightsActions.getEngagementMetrics(true), // force refresh
+          ]);
+
+          if (activityResult.success && activityResult.data) {
+            setActivityData(activityResult.data);
+          }
+          if (engagementResult.success && engagementResult.data) {
+            setEngagementData(engagementResult.data);
+          }
+        } catch (error) {
+          console.error('Failed to refresh insights:', error);
+        }
+      }
+    };
+
+    refreshInsights();
+  }, [plants.length, stats?.totalPlants]); // Re-run when plants or stats change
+
   // Calculate dynamic hero data
   const heroData = useMemo(() => {
     const totalPlants = stats?.totalPlants || plants.length || 0;
@@ -213,40 +229,57 @@ export default function InsightsScreen() {
     const criticalCount = stats?.criticalCount || 0;
     const warningCount = stats?.warningCount || 0;
 
-    const healthScore = totalPlants > 0 ? Math.round((healthyCount / totalPlants) * 100) : 0;
+    const healthScore = totalPlants > 0 ? parseFloat(((healthyCount / totalPlants) * 100).toFixed(1)) : 0;
     const attentionNeeded = criticalCount + warningCount;
+
+    // Calculate activity trend from engagement data
+    const activityTrend = engagementData?.engagement?.trends?.weekOverWeek || 0;
+    const activityChange = activityTrend > 0 ? `+${activityTrend}%` :
+                          activityTrend < 0 ? `${activityTrend}%` : 'ไม่เปลี่ยนแปลง';
 
     return {
       title: healthScore >= 80 ? 'สวนของคุณกำลังแข็งแรง' :
              healthScore >= 60 ? 'สวนของคุณมีสุขภาพดี' : 'สวนต้องการความดูแล',
       caption: `คะแนนสุขภาพเฉลี่ย ${healthScore} / 100 · ${attentionNeeded > 0 ? `ตรวจพบต้นไม้ที่ควรเฝ้าดู ${attentionNeeded} ต้น` : 'ทุกต้นมีสุขภาพดี'}`,
-      activityChange: engagementData?.appUsage?.weeklyActiveTime ? '+14%' : 'ไม่มีข้อมูล',
+      activityChange: isLoading ? 'กำลังโหลด...' : activityChange,
       pendingTasks: attentionNeeded,
+      engagementScore: engagementData?.engagement?.score || 0,
+      engagementLevel: engagementData?.engagement?.level || 'low',
     };
-  }, [stats, plants, engagementData]);
+  }, [stats, plants, engagementData, isLoading]);
 
   // Calculate dynamic metrics
   const dynamicMetrics = useMemo(() => {
     const totalPlants = stats?.totalPlants || plants.length || 0;
     const healthyCount = stats?.healthyCount || 0;
 
-    // Calculate weekly activities (using totalCount from activity data)
-    const weeklyActivities = activityData ? activityData.reduce((sum, activity) => sum + activity.totalCount, 0) : 27;
+    // Calculate weekly activities from engagement data
+    const weeklyActivities = engagementData?.featureUsage?.activityLogging ||
+                           (activityData ? activityData.reduce((sum, activity) => sum + activity.totalCount, 0) : 0);
+
+    // Get real activity trend from engagement data
+    const activityTrend = engagementData?.engagement?.trends?.weekOverWeek || 0;
+    const activityChange = isLoading ? 'กำลังโหลด...' :
+                          activityTrend > 0 ? `+${activityTrend}% จากค่าเฉลี่ย` :
+                          activityTrend < 0 ? `${activityTrend}% จากค่าเฉลี่ย` :
+                          'ไม่เปลี่ยนแปลง';
 
     return [
       {
         id: 'metric-activity',
-        label: 'กิจกรรมสัปดาห์นี้',
+        label: 'กิจกรรมทั้งหมด',
         value: `${weeklyActivities} ครั้ง`,
-        change: engagementData ? '+14% จากค่าเฉลี่ย' : 'กำลังโหลด...',
+        change: activityChange,
         Icon: Activity,
-        trend: [10, 12, 13, 16, 17, 21, 18], // Mock trend data
+        trend: [10, 12, 13, 16, 17, 21, 18], // Mock trend data for chart
       },
       {
         id: 'metric-moisture',
-        label: 'ความชื้นเฉลี่ย',
-        value: '58%', // Should come from sensor data
-        change: 'อยู่ในช่วงเหมาะสม',
+        label: 'ความชื้นอากาศ',
+        value: weather?.humidity ? `${weather.humidity.toFixed(1)}%` : '58%',
+        change: weather?.humidity
+          ? (weather.humidity >= 40 && weather.humidity <= 70 ? 'อยู่ในช่วงเหมาะสม' : weather.humidity > 70 ? 'ชื้นเกินไป' : 'แห้งเกินไป')
+          : 'กำลังโหลด...',
         Icon: Droplet,
       },
       {
@@ -257,14 +290,17 @@ export default function InsightsScreen() {
         Icon: Leaf,
       },
       {
-        id: 'metric-temperature',
-        label: 'อุณหภูมิเฉลี่ย',
-        value: '26°C', // Should come from weather data
-        change: 'เหมาะสำหรับพืช',
-        Icon: ThermometerSun,
+        id: 'metric-engagement',
+        label: 'คะแนนการมีส่วนร่วม',
+        value: engagementData ? `${engagementData.engagement.score}/100` : '--',
+        change: isLoading ? 'กำลังโหลด...' :
+                engagementData?.engagement?.level === 'very_high' ? 'การมีส่วนร่วมสูงมาก' :
+                engagementData?.engagement?.level === 'high' ? 'การมีส่วนร่วมสูง' :
+                engagementData?.engagement?.level === 'medium' ? 'การมีส่วนร่วมปานกลาง' : 'ควรเพิ่มการใช้งาน',
+        Icon: Sparkles,
       },
     ];
-  }, [stats, plants, activityData, engagementData]);
+  }, [stats, plants, activityData, engagementData, weather, isLoading]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -334,6 +370,106 @@ export default function InsightsScreen() {
             </View>
           ))}
         </ScrollView>
+
+        {/* Productivity Score Section */}
+        {productivityData && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>คะแนนประสิทธิภาพการดูแล</Text>
+              <Text style={styles.sectionLink}>ดูรายละเอียด ›</Text>
+            </View>
+
+            <View style={styles.productivityCard}>
+              <View style={styles.productivityHeader}>
+                <View style={styles.productivityScoreContainer}>
+                  <Text style={styles.productivityScore}>{productivityData.overall}</Text>
+                  <Text style={styles.productivityScoreLabel}>/100</Text>
+                </View>
+                <View style={styles.productivityTrends}>
+                  <Text style={styles.productivityTrendLabel}>เดือนนี้</Text>
+                  <Text style={[
+                    styles.productivityTrendValue,
+                    { color: productivityData.comparison.vsLastMonth >= 0 ? theme.colors.success : theme.colors.error }
+                  ]}>
+                    {productivityData.comparison.vsLastMonth >= 0 ? '+' : ''}{productivityData.comparison.vsLastMonth}%
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.productivityBreakdown}>
+                <View style={styles.productivityMetric}>
+                  <Text style={styles.productivityMetricLabel}>ความสม่ำเสมอ</Text>
+                  <View style={styles.productivityBar}>
+                    <View style={[
+                      styles.productivityBarFill,
+                      {
+                        width: `${productivityData.breakdown.consistency}%`,
+                        backgroundColor: theme.colors.primary
+                      }
+                    ]} />
+                  </View>
+                  <Text style={styles.productivityMetricValue}>{productivityData.breakdown.consistency}%</Text>
+                </View>
+
+                <View style={styles.productivityMetric}>
+                  <Text style={styles.productivityMetricLabel}>ความครบถ้วน</Text>
+                  <View style={styles.productivityBar}>
+                    <View style={[
+                      styles.productivityBarFill,
+                      {
+                        width: `${productivityData.breakdown.completeness}%`,
+                        backgroundColor: theme.colors.primary
+                      }
+                    ]} />
+                  </View>
+                  <Text style={styles.productivityMetricValue}>{productivityData.breakdown.completeness}%</Text>
+                </View>
+
+                <View style={styles.productivityMetric}>
+                  <Text style={styles.productivityMetricLabel}>ความตรงเวลา</Text>
+                  <View style={styles.productivityBar}>
+                    <View style={[
+                      styles.productivityBarFill,
+                      {
+                        width: `${productivityData.breakdown.timeliness}%`,
+                        backgroundColor: theme.colors.primary
+                      }
+                    ]} />
+                  </View>
+                  <Text style={styles.productivityMetricValue}>{productivityData.breakdown.timeliness}%</Text>
+                </View>
+
+                <View style={styles.productivityMetric}>
+                  <Text style={styles.productivityMetricLabel}>ประสิทธิผล</Text>
+                  <View style={styles.productivityBar}>
+                    <View style={[
+                      styles.productivityBarFill,
+                      {
+                        width: `${productivityData.breakdown.effectiveness}%`,
+                        backgroundColor: theme.colors.primary
+                      }
+                    ]} />
+                  </View>
+                  <Text style={styles.productivityMetricValue}>{productivityData.breakdown.effectiveness}%</Text>
+                </View>
+              </View>
+
+              {productivityData.achievements.length > 0 && (
+                <View style={styles.achievementsContainer}>
+                  <Text style={styles.achievementsTitle}>ผลงานที่ได้รับ</Text>
+                  <View style={styles.achievementsList}>
+                    {productivityData.achievements.slice(0, 2).map((achievement, index) => (
+                      <View key={index} style={styles.achievementBadge}>
+                        <Text style={styles.achievementEmoji}>🏆</Text>
+                        <Text style={styles.achievementName}>{achievement.nameThai}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
 
         {/* Activity block */}
         <View style={styles.section}>
@@ -409,19 +545,85 @@ export default function InsightsScreen() {
           </View>
         </View>
 
-        {/* AI advice */}
+        {/* Personalized AI Tips */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>คำแนะนำจาก AI</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>คำแนะนำเฉพาะสำหรับคุณ</Text>
+            <Text style={styles.sectionLink}>ดูทั้งหมด ›</Text>
+          </View>
           <View style={styles.tipStack}>
-            {aiAdvice.map((tip) => (
-              <View key={tip.id} style={styles.tipCard}>
+            {personalizedTips && personalizedTips.length > 0 ? (
+              personalizedTips
+                .sort((a, b) => {
+                  const priorityOrder = { 'high': 3, 'medium': 2, 'low': 1 };
+                  return priorityOrder[b.priority] - priorityOrder[a.priority];
+                })
+                .slice(0, 3) // Show top 3 tips
+                .map((tip) => (
+                  <View key={tip.id} style={[
+                    styles.tipCard,
+                    tip.priority === 'high' && styles.tipCardHigh,
+                    tip.priority === 'medium' && styles.tipCardMedium,
+                  ]}>
+                    <View style={styles.tipHeaderRow}>
+                      <View style={[
+                        styles.tipBullet,
+                        tip.priority === 'high' && styles.tipBulletHigh,
+                        tip.priority === 'medium' && styles.tipBulletMedium,
+                      ]} />
+                      <Text style={styles.tipTitle}>{tip.titleThai}</Text>
+                      <View style={[
+                        styles.tipPriorityBadge,
+                        tip.priority === 'high' && styles.tipPriorityHigh,
+                        tip.priority === 'medium' && styles.tipPriorityMedium,
+                        tip.priority === 'low' && styles.tipPriorityLow,
+                      ]}>
+                        <Text style={[
+                          styles.tipPriorityText,
+                          tip.priority === 'high' && styles.tipPriorityTextHigh,
+                        ]}>
+                          {tip.priority === 'high' ? 'สำคัญ' :
+                           tip.priority === 'medium' ? 'ปานกลาง' : 'ทั่วไป'}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={styles.tipBody}>{tip.descriptionThai}</Text>
+
+                    {tip.actionable.stepsThai.length > 0 && (
+                      <View style={styles.tipActions}>
+                        <Text style={styles.tipActionsTitle}>ขั้นตอนที่แนะนำ:</Text>
+                        {tip.actionable.stepsThai.slice(0, 2).map((step, index) => (
+                          <Text key={index} style={styles.tipActionItem}>
+                            • {step}
+                          </Text>
+                        ))}
+                      </View>
+                    )}
+
+                    <View style={styles.tipFooter}>
+                      <Text style={styles.tipRelevance}>
+                        เกี่ยวข้อง {(tip.relevance * 100).toFixed(1)}%
+                      </Text>
+                      <Text style={styles.tipCategory}>
+                        {tip.category === 'care' ? '🌱 การดูแล' :
+                         tip.category === 'timing' ? '⏰ เวลา' :
+                         tip.category === 'plant_health' ? '🍃 สุขภาพพืช' :
+                         tip.category === 'seasonal' ? '🌤️ ตามฤดูกาล' : '💡 ทั่วไป'}
+                      </Text>
+                    </View>
+                  </View>
+                ))
+            ) : (
+              <View style={styles.tipCard}>
                 <View style={styles.tipHeaderRow}>
                   <View style={styles.tipBullet} />
-                  <Text style={styles.tipTitle}>{tip.title}</Text>
+                  <Text style={styles.tipTitle}>ยังไม่มีคำแนะนำ</Text>
                 </View>
-                <Text style={styles.tipBody}>{tip.body}</Text>
+                <Text style={styles.tipBody}>
+                  เริ่มดูแลพืชเพื่อรับคำแนะนำเฉพาะสำหรับคุณ
+                </Text>
               </View>
-            ))}
+            )}
           </View>
         </View>
 
@@ -887,6 +1089,198 @@ const createStyles = (theme: Theme) => {
     },
     sectionLast: {
       marginBottom: getSpacing(8),
+    },
+
+    // Productivity Score Styles
+    productivityCard: {
+      backgroundColor: theme.colors.surface.primary,
+      borderRadius: radius.lg,
+      padding: getSpacing(4),
+      borderWidth: 1,
+      borderColor: surfaceBorder,
+      shadowColor: surfaceShadowSoft,
+      shadowOpacity: isDark ? 0.25 : 0.12,
+      shadowOffset: { width: 0, height: 10 },
+      shadowRadius: 20,
+      elevation: 4,
+      marginTop: getSpacing(2),
+    },
+    productivityHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: getSpacing(4),
+    },
+    productivityScoreContainer: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
+    },
+    productivityScore: {
+      fontSize: 32,
+      fontFamily: typography.fontFamily.bold,
+      color: theme.colors.primary,
+    },
+    productivityScoreLabel: {
+      fontSize: typography.fontSize.base,
+      fontFamily: typography.fontFamily.medium,
+      color: theme.colors.text.secondary,
+      marginLeft: getSpacing(1),
+    },
+    productivityTrends: {
+      alignItems: 'flex-end',
+    },
+    productivityTrendLabel: {
+      fontSize: typography.fontSize.xs,
+      fontFamily: typography.fontFamily.medium,
+      color: theme.colors.text.secondary,
+      marginBottom: getSpacing(0.5),
+    },
+    productivityTrendValue: {
+      fontSize: typography.fontSize.sm,
+      fontFamily: typography.fontFamily.semibold,
+    },
+    productivityBreakdown: {
+      gap: getSpacing(3),
+    },
+    productivityMetric: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    productivityMetricLabel: {
+      fontSize: typography.fontSize.sm,
+      fontFamily: typography.fontFamily.medium,
+      color: theme.colors.text.primary,
+      flex: 1,
+    },
+    productivityBar: {
+      height: 8,
+      backgroundColor: theme.colors.surface.elevated,
+      borderRadius: radius.sm,
+      flex: 2,
+      marginHorizontal: getSpacing(2),
+      overflow: 'hidden',
+    },
+    productivityBarFill: {
+      height: '100%',
+      borderRadius: radius.sm,
+    },
+    productivityMetricValue: {
+      fontSize: typography.fontSize.sm,
+      fontFamily: typography.fontFamily.semibold,
+      color: theme.colors.text.primary,
+      minWidth: 40,
+      textAlign: 'right',
+    },
+    achievementsContainer: {
+      marginTop: getSpacing(4),
+      paddingTop: getSpacing(3),
+      borderTopWidth: 1,
+      borderTopColor: surfaceBorder,
+    },
+    achievementsTitle: {
+      fontSize: typography.fontSize.sm,
+      fontFamily: typography.fontFamily.semibold,
+      color: theme.colors.text.primary,
+      marginBottom: getSpacing(2),
+    },
+    achievementsList: {
+      flexDirection: 'row',
+      gap: getSpacing(2),
+    },
+    achievementBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.colors.surface.elevated,
+      paddingVertical: getSpacing(1),
+      paddingHorizontal: getSpacing(2),
+      borderRadius: radius.md,
+    },
+    achievementEmoji: {
+      fontSize: 16,
+      marginRight: getSpacing(1),
+    },
+    achievementName: {
+      fontSize: typography.fontSize.xs,
+      fontFamily: typography.fontFamily.medium,
+      color: theme.colors.text.primary,
+    },
+
+    // Enhanced Tip Styles
+    tipCardHigh: {
+      borderLeftWidth: 3,
+      borderLeftColor: theme.colors.error,
+    },
+    tipCardMedium: {
+      borderLeftWidth: 3,
+      borderLeftColor: theme.colors.warning,
+    },
+    tipBulletHigh: {
+      backgroundColor: theme.colors.error,
+    },
+    tipBulletMedium: {
+      backgroundColor: theme.colors.warning,
+    },
+    tipPriorityBadge: {
+      paddingHorizontal: getSpacing(1.5),
+      paddingVertical: getSpacing(0.5),
+      borderRadius: radius.sm,
+      marginLeft: getSpacing(2),
+    },
+    tipPriorityHigh: {
+      backgroundColor: theme.colors.error + '20',
+    },
+    tipPriorityMedium: {
+      backgroundColor: theme.colors.warning + '20',
+    },
+    tipPriorityLow: {
+      backgroundColor: theme.colors.surface.elevated,
+    },
+    tipPriorityText: {
+      fontSize: typography.fontSize.xs,
+      fontFamily: typography.fontFamily.medium,
+      color: theme.colors.text.secondary,
+    },
+    tipPriorityTextHigh: {
+      color: theme.colors.error,
+    },
+    tipActions: {
+      marginTop: getSpacing(2),
+      paddingTop: getSpacing(2),
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.surface.elevated,
+    },
+    tipActionsTitle: {
+      fontSize: typography.fontSize.xs,
+      fontFamily: typography.fontFamily.semibold,
+      color: theme.colors.text.primary,
+      marginBottom: getSpacing(1),
+    },
+    tipActionItem: {
+      fontSize: typography.fontSize.xs,
+      fontFamily: typography.fontFamily.regular,
+      color: theme.colors.text.secondary,
+      marginBottom: getSpacing(0.5),
+      lineHeight: 16,
+    },
+    tipFooter: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginTop: getSpacing(2),
+      paddingTop: getSpacing(2),
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.surface.elevated,
+    },
+    tipRelevance: {
+      fontSize: typography.fontSize.xs,
+      fontFamily: typography.fontFamily.medium,
+      color: theme.colors.text.tertiary,
+    },
+    tipCategory: {
+      fontSize: typography.fontSize.xs,
+      fontFamily: typography.fontFamily.medium,
+      color: theme.colors.text.secondary,
     },
   });
 };

@@ -600,7 +600,7 @@ export default function GardenScreen() {
           </View>
 
           {/* Health Progress Bar */}
-          <View style={[styles.healthProgressBg, { backgroundColor: theme.colors.background }]}>
+          <View style={[styles.healthProgressBg, { backgroundColor: theme.colors.background.primary }]}>
             <View
               style={[
                 styles.healthProgress,
@@ -723,7 +723,7 @@ export default function GardenScreen() {
         </View>
 
         {/* Enhanced Filter Section */}
-        <View style={[styles.enhancedFilterSection, { backgroundColor: theme.colors.background }]}>
+        <View style={[styles.enhancedFilterSection, { backgroundColor: theme.colors.background.primary }]}>
           {/* Primary Filter Row */}
           <View style={styles.primaryFilterRow}>
             <Text style={[styles.filterLabel, { color: theme.colors.text.secondary }]}>สถานะ</Text>
@@ -918,7 +918,7 @@ export default function GardenScreen() {
     theme.colors.text.primary,
     theme.colors.text.secondary,
     theme.colors.text.tertiary,
-    theme.colors.background,
+    theme.colors.background.primary,
     theme.colors.success,
     theme.colors.warning,
     theme.colors.error,
@@ -942,7 +942,7 @@ export default function GardenScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background.primary }]}>
         <OptimizedFlatList
           data={[]}
           renderItem={() => <View />}
@@ -954,7 +954,7 @@ export default function GardenScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background.primary }]}>
       <OptimizedFlatList
         ref={listRef}
         key={`${viewMode}-${isSearching ? 'loading' : 'ready'}`}
