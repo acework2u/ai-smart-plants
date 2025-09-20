@@ -46,7 +46,7 @@ interface InsightsState {
 
   // Current computation state
   isLoading: boolean;
-  loadingTasks: Set<string>;
+  loadingTasks: string[];
   error: string | null;
 
   // Performance metrics
@@ -155,7 +155,7 @@ interface InsightsActions {
 const initialState: InsightsState = {
   cache: {},
   isLoading: false,
-  loadingTasks: new Set(),
+  loadingTasks: [],
   error: null,
   performance: {
     totalComputations: 0,
@@ -225,7 +225,9 @@ export const useInsightsStore = create<InsightsState & InsightsActions>()(
         // Mark as loading
         set((state) => {
           state.isLoading = true;
-          state.loadingTasks.add(cacheKey);
+          if (!state.loadingTasks.includes(cacheKey)) {
+            state.loadingTasks.push(cacheKey);
+          }
           state.error = null;
         });
 
@@ -283,8 +285,11 @@ export const useInsightsStore = create<InsightsState & InsightsActions>()(
           };
         } finally {
           set((state) => {
-            state.loadingTasks.delete(cacheKey);
-            state.isLoading = state.loadingTasks.size > 0;
+            const taskIndex = state.loadingTasks.indexOf(cacheKey);
+            if (taskIndex > -1) {
+              state.loadingTasks.splice(taskIndex, 1);
+            }
+            state.isLoading = state.loadingTasks.length > 0;
           });
         }
       },
