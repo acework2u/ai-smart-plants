@@ -2,12 +2,10 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { produce } from 'immer';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Notifications from 'expo-notifications';
 import {
   NotiItem,
   NotiType,
   CreateNotificationInput,
-  NotificationFilter,
   NotificationStats,
   formatNotificationTime,
   validateNotification,
@@ -16,12 +14,12 @@ import {
   GlobalNotificationPreferences,
   WeatherContext,
   SeasonalCareConfig,
-  NotificationBatch,
 } from '../types/notifications';
 import { ActivityKind } from '../types/activity';
 import { STORAGE_KEYS } from '../types';
-import NotificationScheduler from '../services/NotificationScheduler';
+import { NotificationScheduler } from '../services/NotificationScheduler';
 import { Plant } from '../types/garden';
+import { notificationsModule as Notifications } from '../services/notifications/adapter';
 
 interface NotificationState {
   // State
@@ -246,7 +244,7 @@ const createMockNotifications = (): NotiItem[] => [
 ];
 
 // Configure notification handling
-Notifications.setNotificationHandler({
+Notifications?.setNotificationHandler?.({
   handleNotification: async () => ({
     shouldShowAlert: true,
     shouldPlaySound: true,
@@ -418,6 +416,11 @@ export const useNotificationStore = create<NotificationState>()(
       // Scheduling Actions
       scheduleNotification: async (notification: CreateNotificationInput & { scheduledFor: Date }) => {
         try {
+          if (!Notifications?.scheduleNotificationAsync) {
+            console.warn('[notifications] scheduleNotificationAsync unavailable – scheduling skipped.');
+            return 'notifications-disabled';
+          }
+
           const { scheduledFor, ...notificationData } = notification;
 
           // Schedule with Expo Notifications
@@ -458,9 +461,13 @@ export const useNotificationStore = create<NotificationState>()(
         try {
           const notification = get().notifications.find((n) => n.id === notificationId);
           if (notification?.metadata?.scheduledIdentifier) {
-            await Notifications.cancelScheduledNotificationAsync(
-              notification.metadata.scheduledIdentifier as string
-            );
+            if (!Notifications?.cancelScheduledNotificationAsync) {
+              console.warn('[notifications] cancelScheduledNotificationAsync unavailable – skip cancel.');
+            } else {
+              await Notifications.cancelScheduledNotificationAsync(
+                notification.metadata.scheduledIdentifier as string
+              );
+            }
           }
 
           get().removeNotification(notificationId);

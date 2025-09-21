@@ -1,10 +1,8 @@
 import React, { useCallback, useMemo } from 'react';
 import {
-  Alert,
   Pressable,
   SafeAreaView,
   ScrollView,
-  Share,
   StyleSheet,
   Switch,
   Text,
@@ -13,6 +11,7 @@ import {
 import {
   Bell,
   Clock,
+  ChevronRight,
   CloudDownload,
   Database,
   Droplet,
@@ -29,6 +28,7 @@ import {
   ThermometerSun,
   Vibrate,
 } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 import { Card } from '../../components/atoms/Card';
 import { useTheme, type Theme } from '../../contexts/ThemeContext';
 import { radius, typography } from '../../core/theme';
@@ -36,7 +36,6 @@ import { usePreferencesStore } from '../../stores/preferences';
 import { useNotificationStore } from '../../stores/notificationStore';
 import { useUser } from '../../stores/userStore';
 import { useHaptic } from '../../core/haptics';
-import type { GlobalNotificationPreferences } from '../../types/notifications';
 
 type ThemeOption = 'light' | 'dark' | 'system';
 type LanguageOption = 'th' | 'en';
@@ -88,6 +87,15 @@ const SettingRow: React.FC<SettingRowProps> = ({
 }) => {
   const { theme } = useTheme();
   const styles = useMemo(() => createSettingRowStyles(theme, isLast), [theme, isLast]);
+  const showChevron = Boolean(onPress && !accessory);
+
+  const trailing = accessory ? (
+    <View style={styles.accessoryContainer}>{accessory}</View>
+  ) : showChevron ? (
+    <View style={styles.chevronContainer}>
+      <ChevronRight size={18} color={theme.colors.text.tertiary} />
+    </View>
+  ) : null;
 
   const content = (
     <View style={styles.rowContent}>
@@ -98,7 +106,7 @@ const SettingRow: React.FC<SettingRowProps> = ({
         <Text style={styles.rowTitle}>{title}</Text>
         {description ? <Text style={styles.rowDescription}>{description}</Text> : null}
       </View>
-      {accessory ? <View style={styles.accessoryContainer}>{accessory}</View> : null}
+      {trailing}
     </View>
   );
 
@@ -136,7 +144,11 @@ const OptionGroup = <T extends string>({ value, options, onChange, disabled }: O
         return (
           <Pressable
             key={option.value}
-            style={[styles.optionButton, isActive && styles.optionButtonActive, disabled && styles.optionButtonDisabled]}
+            style={[
+              styles.optionButton,
+              isActive && styles.optionButtonActive,
+              disabled && styles.optionButtonDisabled,
+            ]}
             onPress={disabled ? undefined : () => onChange(option.value)}
             android_ripple={{ color: theme.colors.background.overlayLight, borderless: true }}
             accessibilityRole="button"
@@ -153,7 +165,29 @@ const OptionGroup = <T extends string>({ value, options, onChange, disabled }: O
   );
 };
 
+interface SectionContainerProps {
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+}
+
+const SectionContainer: React.FC<SectionContainerProps> = ({ title, description, children }) => {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createSectionStyles(theme), [theme]);
+
+  return (
+    <View style={styles.wrapper}>
+      <Text style={styles.title}>{title}</Text>
+      {description ? <Text style={styles.description}>{description}</Text> : null}
+      <Card variant="flat" style={styles.card} padding={0} shadowLevel="sm">
+        {children}
+      </Card>
+    </View>
+  );
+};
+
 const SettingsScreen: React.FC = () => {
+  const router = useRouter();
   const { theme, setThemeMode } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const hapticController = useHaptic();
@@ -171,11 +205,9 @@ const SettingsScreen: React.FC = () => {
   const updateLanguage = usePreferencesStore((state) => state.updateLanguage);
   const updateUnits = usePreferencesStore((state) => state.updateUnits);
   const updatePrivacy = usePreferencesStore((state) => state.updatePrivacySettings);
-  const resetUserPrefs = usePreferencesStore((state) => state.resetUserPrefs);
 
   const globalNotificationPreferences = useNotificationStore((state) => state.globalPreferences);
   const updateGlobalNotifications = useNotificationStore((state) => state.updateGlobalPreferences);
-  const clearNotifications = useNotificationStore((state) => state.clearNotifications);
 
   const handleThemeChange = useCallback(
     (next: ThemeOption) => {
@@ -330,75 +362,6 @@ const SettingsScreen: React.FC = () => {
     [globalNotificationPreferences.timing, hapticController, hapticsEnabled, updateGlobalNotifications]
   );
 
-  const handleResetPreferences = useCallback(() => {
-    Alert.alert(
-      'รีเซ็ตการตั้งค่า',
-      'ต้องการคืนค่าการตั้งค่าเริ่มต้นทั้งหมดหรือไม่?',
-      [
-        { text: 'ยกเลิก', style: 'cancel' },
-        {
-          text: 'ยืนยัน',
-          style: 'destructive',
-          onPress: () => {
-            resetUserPrefs();
-            void updateGlobalNotifications(createDefaultNotificationOverrides());
-            const nextTheme = usePreferencesStore.getState().userPrefs.theme as ThemeOption;
-            void setThemeMode(nextTheme);
-            hapticController.enable();
-            if (hapticsEnabled) {
-              void hapticController.success();
-            }
-          },
-        },
-      ]
-    );
-  }, [
-    hapticController,
-    hapticsEnabled,
-    resetUserPrefs,
-    setThemeMode,
-    updateGlobalNotifications,
-  ]);
-
-  const handleClearNotifications = useCallback(() => {
-    Alert.alert(
-      'ล้างการแจ้งเตือน',
-      'ต้องการลบประวัติการแจ้งเตือนทั้งหมดหรือไม่?',
-      [
-        { text: 'ยกเลิก', style: 'cancel' },
-        {
-          text: 'ลบ',
-          style: 'destructive',
-          onPress: () => {
-            clearNotifications();
-            if (hapticsEnabled) {
-              void hapticController.warning();
-            }
-          },
-        },
-      ]
-    );
-  }, [clearNotifications, hapticController, hapticsEnabled]);
-
-  const handleExportData = useCallback(async () => {
-    try {
-      const payload = user ? JSON.stringify(user, null, 2) : 'ไม่มีข้อมูลผู้ใช้';
-      await Share.share({
-        title: 'ข้อมูลผู้ใช้ Smart Plant',
-        message: payload,
-      });
-      if (hapticsEnabled) {
-        void hapticController.success();
-      }
-    } catch (error) {
-      console.error('Failed to export user data:', error);
-      Alert.alert('ไม่สามารถส่งออกข้อมูลได้', 'กรุณาลองใหม่ในภายหลัง');
-      if (hapticsEnabled) {
-        void hapticController.error();
-      }
-    }
-  }, [hapticController, hapticsEnabled, user]);
-
   const quietHoursLabel = `${globalNotificationPreferences.timing.quietHours.start} - ${globalNotificationPreferences.timing.quietHours.end}`;
 
   const joinDate = user?.joinDate
@@ -434,302 +397,276 @@ const SettingsScreen: React.FC = () => {
           </View>
         </Card>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>การตั้งค่าทั่วไป</Text>
-          <View style={styles.sectionCard}>
-            <SettingRow
-              title="ธีมแอป"
-              description="เลือกโหมดการแสดงผลที่เหมาะกับคุณ"
-              icon={SunMoon}
-              accessory={
-                <OptionGroup<ThemeOption>
-                  value={themePreference}
-                  options={themeOptions}
-                  onChange={handleThemeChange}
-                />
-              }
-            />
-            <SettingRow
-              title="ภาษา"
-              description="สลับภาษาในการใช้งานแอป"
-              icon={Languages}
-              accessory={
-                <OptionGroup<LanguageOption>
-                  value={language}
-                  options={languageOptions}
-                  onChange={handleLanguageChange}
-                />
-              }
-            />
-            <SettingRow
-              title="การสั่นตอบสนอง"
-              description="ให้แอปตอบสนองเมื่อมีการแตะหรือเลือก"
-              icon={Vibrate}
-              accessory={
-                <Switch
-                  value={hapticsEnabled}
-                  onValueChange={handleToggleHaptics}
-                  trackColor={{ true: theme.colors.primary, false: theme.colors.surface.disabled }}
-                  thumbColor={theme.colors.white}
-                />
-              }
-            />
-          </View>
-        </View>
+        <SectionContainer
+          title="การตั้งค่าทั่วไป"
+          description="ปรับพื้นฐานการใช้งานให้ตรงกับสไตล์ของคุณ"
+        >
+          <SettingRow
+            title="ธีมแอป"
+            description="เลือกโหมดการแสดงผลที่เหมาะกับคุณ"
+            icon={SunMoon}
+            accessory={
+              <OptionGroup<ThemeOption>
+                value={themePreference}
+                options={themeOptions}
+                onChange={handleThemeChange}
+              />
+            }
+          />
+          <SettingRow
+            title="ภาษา"
+            description="สลับภาษาในการใช้งานแอป"
+            icon={Languages}
+            accessory={
+              <OptionGroup<LanguageOption>
+                value={language}
+                options={languageOptions}
+                onChange={handleLanguageChange}
+              />
+            }
+          />
+          <SettingRow
+            title="การสั่นตอบสนอง"
+            description="ให้แอปตอบสนองเมื่อมีการแตะหรือเลือก"
+            icon={Vibrate}
+            accessory={
+              <Switch
+                value={hapticsEnabled}
+                onValueChange={handleToggleHaptics}
+                trackColor={{ true: theme.colors.primary, false: theme.colors.surface.disabled }}
+                thumbColor={theme.colors.white}
+              />
+            }
+          />
+        </SectionContainer>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>หน่วยวัด</Text>
-          <View style={styles.sectionCard}>
-            <SettingRow
-              title="ปริมาณน้ำ"
-              description="เลือกหน่วยสำหรับการรดน้ำ"
-              icon={Droplet}
-              accessory={
-                <OptionGroup<VolumeUnit>
-                  value={units.volume}
-                  options={[
-                    { value: 'ml', label: 'มล.' },
-                    { value: 'ล.', label: 'ลิตร' },
-                  ]}
-                  onChange={(next) => handleUnitChange('volume', next)}
-                />
-              }
-            />
-            <SettingRow
-              title="น้ำหนักปุ๋ย"
-              description="ชุดหน่วยสำหรับการใส่ปุ๋ย"
-              icon={Scale}
-              accessory={
-                <OptionGroup<WeightUnit>
-                  value={units.weight}
-                  options={[
-                    { value: 'g', label: 'กรัม' },
-                    { value: 'kg', label: 'กิโลกรัม' },
-                  ]}
-                  onChange={(next) => handleUnitChange('weight', next)}
-                />
-              }
-            />
-            <SettingRow
-              title="อุณหภูมิ"
-              description="ปรับหน่วยการแสดงผลอุณหภูมิ"
-              icon={ThermometerSun}
-              accessory={
-                <OptionGroup<TemperatureUnit>
-                  value={units.temperature}
-                  options={[
-                    { value: 'celsius', label: '°C' },
-                    { value: 'fahrenheit', label: '°F' },
-                  ]}
-                  onChange={(next) => handleUnitChange('temperature', next)}
-                />
-              }
-            />
-          </View>
-        </View>
+        <SectionContainer
+          title="หน่วยวัด"
+          description="กำหนดหน่วยที่คุ้นเคยเพื่อความแม่นยำในการดูแล"
+        >
+          <SettingRow
+            title="ปริมาณน้ำ"
+            description="เลือกหน่วยสำหรับการรดน้ำ"
+            icon={Droplet}
+            accessory={
+              <OptionGroup<VolumeUnit>
+                value={units.volume}
+                options={[
+                  { value: 'ml', label: 'มล.' },
+                  { value: 'ล.', label: 'ลิตร' },
+                ]}
+                onChange={(next) => handleUnitChange('volume', next)}
+              />
+            }
+          />
+          <SettingRow
+            title="น้ำหนักปุ๋ย"
+            description="ชุดหน่วยสำหรับการใส่ปุ๋ย"
+            icon={Scale}
+            accessory={
+              <OptionGroup<WeightUnit>
+                value={units.weight}
+                options={[
+                  { value: 'g', label: 'กรัม' },
+                  { value: 'kg', label: 'กิโลกรัม' },
+                ]}
+                onChange={(next) => handleUnitChange('weight', next)}
+              />
+            }
+          />
+          <SettingRow
+            title="อุณหภูมิ"
+            description="ปรับหน่วยการแสดงผลอุณหภูมิ"
+            icon={ThermometerSun}
+            accessory={
+              <OptionGroup<TemperatureUnit>
+                value={units.temperature}
+                options={[
+                  { value: 'celsius', label: '°C' },
+                  { value: 'fahrenheit', label: '°F' },
+                ]}
+                onChange={(next) => handleUnitChange('temperature', next)}
+              />
+            }
+          />
+        </SectionContainer>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>การแจ้งเตือน</Text>
-          <View style={styles.sectionCard}>
-            <SettingRow
-              title="เปิดใช้งานการแจ้งเตือน"
-              description="รับการแจ้งเตือนการดูแลต้นไม้และคำแนะนำ AI"
-              icon={Bell}
-              accessory={
-                <Switch
-                  value={globalNotificationPreferences.enabled}
-                  onValueChange={handleToggleNotifications}
-                  trackColor={{ true: theme.colors.primary, false: theme.colors.surface.disabled }}
-                  thumbColor={theme.colors.white}
-                />
-              }
-            />
-            <SettingRow
-              title="เงียบตอนกลางคืน"
-              description={`เปิด/ปิดโหมดห้ามรบกวน ${quietHoursLabel}`}
-              icon={MoonStar}
-              accessory={
-                <Switch
-                  value={globalNotificationPreferences.timing.quietHours.enabled}
-                  onValueChange={handleQuietHoursToggle}
-                  trackColor={{ true: theme.colors.primary, false: theme.colors.surface.disabled }}
-                  thumbColor={theme.colors.white}
-                  disabled={!globalNotificationPreferences.enabled}
-                />
-              }
-            />
-            <SettingRow
-              title="เวลาที่แจ้งเตือน"
-              description="เลือกช่วงเวลาที่เหมาะกับคุณ"
-              icon={Clock}
-              accessory={
-                <OptionGroup<string>
-                  value={globalNotificationPreferences.timing.preferredTime}
-                  options={preferredTimeOptions}
-                  onChange={handlePreferredTimeChange}
-                  disabled={!globalNotificationPreferences.enabled}
-                />
-              }
-              disabled={!globalNotificationPreferences.enabled}
-            />
-            <SettingRow
-              title="เสียงแจ้งเตือน"
-              description="เปิดเสียงเมื่อมีการเตือน"
-              icon={SlidersHorizontal}
-              accessory={
-                <Switch
-                  value={globalNotificationPreferences.delivery.sound}
-                  onValueChange={(value) => handleDeliveryToggle('sound', value)}
-                  trackColor={{ true: theme.colors.primary, false: theme.colors.surface.disabled }}
-                  thumbColor={theme.colors.white}
-                  disabled={!globalNotificationPreferences.enabled}
-                />
-              }
-            />
-            <SettingRow
-              title="การสั่นเตือน"
-              description="สั่นเมื่อมีการแจ้งเตือนสำคัญ"
-              icon={Vibrate}
-              accessory={
-                <Switch
-                  value={globalNotificationPreferences.delivery.vibration}
-                  onValueChange={(value) => handleDeliveryToggle('vibration', value)}
-                  trackColor={{ true: theme.colors.primary, false: theme.colors.surface.disabled }}
-                  thumbColor={theme.colors.white}
-                  disabled={!globalNotificationPreferences.enabled}
-                />
-              }
-            />
-          </View>
-        </View>
+        <SectionContainer
+          title="การแจ้งเตือน"
+          description="เลือกรูปแบบและช่วงเวลาที่อยากรับการเตือน"
+        >
+          <SettingRow
+            title="เปิดใช้งานการแจ้งเตือน"
+            description="รับการแจ้งเตือนการดูแลต้นไม้และคำแนะนำ AI"
+            icon={Bell}
+            accessory={
+              <Switch
+                value={globalNotificationPreferences.enabled}
+                onValueChange={handleToggleNotifications}
+                trackColor={{ true: theme.colors.primary, false: theme.colors.surface.disabled }}
+                thumbColor={theme.colors.white}
+              />
+            }
+          />
+          <SettingRow
+            title="เงียบตอนกลางคืน"
+            description={`เปิด/ปิดโหมดห้ามรบกวน ${quietHoursLabel}`}
+            icon={MoonStar}
+            accessory={
+              <Switch
+                value={globalNotificationPreferences.timing.quietHours.enabled}
+                onValueChange={handleQuietHoursToggle}
+                trackColor={{ true: theme.colors.primary, false: theme.colors.surface.disabled }}
+                thumbColor={theme.colors.white}
+                disabled={!globalNotificationPreferences.enabled}
+              />
+            }
+          />
+          <SettingRow
+            title="เวลาที่แจ้งเตือน"
+            description="เลือกช่วงเวลาที่เหมาะกับคุณ"
+            icon={Clock}
+            accessory={
+              <OptionGroup<string>
+                value={globalNotificationPreferences.timing.preferredTime}
+                options={preferredTimeOptions}
+                onChange={handlePreferredTimeChange}
+                disabled={!globalNotificationPreferences.enabled}
+              />
+            }
+            disabled={!globalNotificationPreferences.enabled}
+          />
+          <SettingRow
+            title="เสียงแจ้งเตือน"
+            description="เปิดเสียงเมื่อมีการเตือน"
+            icon={SlidersHorizontal}
+            accessory={
+              <Switch
+                value={globalNotificationPreferences.delivery.sound}
+                onValueChange={(value) => handleDeliveryToggle('sound', value)}
+                trackColor={{ true: theme.colors.primary, false: theme.colors.surface.disabled }}
+                thumbColor={theme.colors.white}
+                disabled={!globalNotificationPreferences.enabled}
+              />
+            }
+          />
+          <SettingRow
+            title="การสั่นเตือน"
+            description="สั่นเมื่อมีการแจ้งเตือนสำคัญ"
+            icon={Vibrate}
+            accessory={
+              <Switch
+                value={globalNotificationPreferences.delivery.vibration}
+                onValueChange={(value) => handleDeliveryToggle('vibration', value)}
+                trackColor={{ true: theme.colors.primary, false: theme.colors.surface.disabled }}
+                thumbColor={theme.colors.white}
+                disabled={!globalNotificationPreferences.enabled}
+              />
+            }
+          />
+        </SectionContainer>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>AI & ความเป็นส่วนตัว</Text>
-          <View style={styles.sectionCard}>
-            <SettingRow
-              title="คำแนะนำ AI ส่วนบุคคล"
-              description="รับคำแนะนำตามพฤติกรรมการดูแลของคุณ"
-              icon={Globe2}
-              accessory={
-                <Switch
-                  value={privacy.personalizedTips}
-                  onValueChange={(value) => handlePrivacyToggle('personalizedTips', value)}
-                  trackColor={{ true: theme.colors.primary, false: theme.colors.surface.disabled }}
-                  thumbColor={theme.colors.white}
-                />
-              }
-            />
-            <SettingRow
-              title="การเก็บข้อมูลการใช้งาน"
-              description="ช่วยพัฒนาแอปด้วยข้อมูลการใช้งานแบบไม่ระบุตัวตน"
-              icon={ShieldCheck}
-              accessory={
-                <Switch
-                  value={privacy.analytics}
-                  onValueChange={(value) => handlePrivacyToggle('analytics', value)}
-                  trackColor={{ true: theme.colors.primary, false: theme.colors.surface.disabled }}
-                  thumbColor={theme.colors.white}
-                />
-              }
-            />
-            <SettingRow
-              title="รายงานข้อผิดพลาด"
-              description="ส่งข้อมูล log เมื่อเกิดปัญหาเพื่อช่วยแก้ไข"
-              icon={CloudDownload}
-              accessory={
-                <Switch
-                  value={privacy.crashReporting}
-                  onValueChange={(value) => handlePrivacyToggle('crashReporting', value)}
-                  trackColor={{ true: theme.colors.primary, false: theme.colors.surface.disabled }}
-                  thumbColor={theme.colors.white}
-                />
-              }
-            />
-            <SettingRow
-              title="ปรับการแจ้งเตือนอัจฉริยะตามสภาพอากาศ"
-              description="รับการแจ้งเตือนตามสภาพอากาศและฤดูกาล"
-              icon={Sun}
-              accessory={
-                <Switch
-                  value={globalNotificationPreferences.smartScheduling.weatherIntegration}
-                  onValueChange={(value) => handleSmartSchedulingToggle('weatherIntegration', value)}
-                  trackColor={{ true: theme.colors.primary, false: theme.colors.surface.disabled }}
-                  thumbColor={theme.colors.white}
-                  disabled={!globalNotificationPreferences.enabled}
-                />
-              }
-            />
-            <SettingRow
-              title="จัดกลุ่มแจ้งเตือนที่คล้ายกัน"
-              description="ลดการแจ้งเตือนรัว ๆ ด้วยการจัดกลุ่ม"
-              icon={Bell}
-              accessory={
-                <Switch
-                  value={globalNotificationPreferences.smartScheduling.batchSimilarNotifications}
-                  onValueChange={(value) => handleSmartSchedulingToggle('batchSimilarNotifications', value)}
-                  trackColor={{ true: theme.colors.primary, false: theme.colors.surface.disabled }}
-                  thumbColor={theme.colors.white}
-                  disabled={!globalNotificationPreferences.enabled}
-                />
-              }
-            />
-          </View>
-        </View>
+        <SectionContainer
+          title="AI & ความเป็นส่วนตัว"
+          description="ควบคุมข้อมูลและคำแนะนำเฉพาะสำหรับคุณ"
+        >
+          <SettingRow
+            title="คำแนะนำ AI ส่วนบุคคล"
+            description="รับคำแนะนำตามพฤติกรรมการดูแลของคุณ"
+            icon={Globe2}
+            accessory={
+              <Switch
+                value={privacy.personalizedTips}
+                onValueChange={(value) => handlePrivacyToggle('personalizedTips', value)}
+                trackColor={{ true: theme.colors.primary, false: theme.colors.surface.disabled }}
+                thumbColor={theme.colors.white}
+              />
+            }
+          />
+          <SettingRow
+            title="การเก็บข้อมูลการใช้งาน"
+            description="ช่วยพัฒนาแอปด้วยข้อมูลการใช้งานแบบไม่ระบุตัวตน"
+            icon={ShieldCheck}
+            accessory={
+              <Switch
+                value={privacy.analytics}
+                onValueChange={(value) => handlePrivacyToggle('analytics', value)}
+                trackColor={{ true: theme.colors.primary, false: theme.colors.surface.disabled }}
+                thumbColor={theme.colors.white}
+              />
+            }
+          />
+          <SettingRow
+            title="รายงานข้อผิดพลาด"
+            description="ส่งข้อมูล log เมื่อเกิดปัญหาเพื่อช่วยแก้ไข"
+            icon={CloudDownload}
+            accessory={
+              <Switch
+                value={privacy.crashReporting}
+                onValueChange={(value) => handlePrivacyToggle('crashReporting', value)}
+                trackColor={{ true: theme.colors.primary, false: theme.colors.surface.disabled }}
+                thumbColor={theme.colors.white}
+              />
+            }
+          />
+          <SettingRow
+            title="ปรับการแจ้งเตือนอัจฉริยะตามสภาพอากาศ"
+            description="รับการแจ้งเตือนตามสภาพอากาศและฤดูกาล"
+            icon={Sun}
+            accessory={
+              <Switch
+                value={globalNotificationPreferences.smartScheduling.weatherIntegration}
+                onValueChange={(value) => handleSmartSchedulingToggle('weatherIntegration', value)}
+                trackColor={{ true: theme.colors.primary, false: theme.colors.surface.disabled }}
+                thumbColor={theme.colors.white}
+                disabled={!globalNotificationPreferences.enabled}
+              />
+            }
+          />
+          <SettingRow
+            title="จัดกลุ่มแจ้งเตือนที่คล้ายกัน"
+            description="ลดการแจ้งเตือนรัว ๆ ด้วยการจัดกลุ่ม"
+            icon={Bell}
+            accessory={
+              <Switch
+                value={globalNotificationPreferences.smartScheduling.batchSimilarNotifications}
+                onValueChange={(value) => handleSmartSchedulingToggle('batchSimilarNotifications', value)}
+                trackColor={{ true: theme.colors.primary, false: theme.colors.surface.disabled }}
+                thumbColor={theme.colors.white}
+                disabled={!globalNotificationPreferences.enabled}
+              />
+            }
+          />
+        </SectionContainer>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>ข้อมูลและการบำรุงรักษา</Text>
-          <View style={styles.sectionCard}>
-            <SettingRow
-              title="สำรองข้อมูลผู้ใช้"
-              description="ส่งออกข้อมูลโปรไฟล์และสถิติการดูแล"
-              icon={Database}
-              onPress={handleExportData}
-            />
-            <SettingRow
-              title="รีเซ็ตการตั้งค่า"
-              description="คืนค่าการตั้งค่ามาตรฐานทั้งหมด"
-              icon={RefreshCw}
-              onPress={handleResetPreferences}
-            />
-            <SettingRow
-              title="ล้างการแจ้งเตือน"
-              description="ลบประวัติการแจ้งเตือนทั้งหมด"
-              icon={Bell}
-              onPress={handleClearNotifications}
-              isLast
-            />
-          </View>
-        </View>
+        <SectionContainer
+          title="ข้อมูลและการบำรุงรักษา"
+          description="จัดการข้อมูลที่บันทึกไว้บนอุปกรณ์นี้"
+        >
+          <SettingRow
+            title="สำรองข้อมูลผู้ใช้"
+            description="ส่งออกข้อมูลโปรไฟล์และสถิติการดูแล"
+            icon={Database}
+            onPress={() => router.push('/settings/data-backup')}
+          />
+          <SettingRow
+            title="รีเซ็ตการตั้งค่า"
+            description="คืนค่าการตั้งค่ามาตรฐานทั้งหมด"
+            icon={RefreshCw}
+            onPress={() => router.push('/settings/reset-preferences')}
+          />
+          <SettingRow
+            title="ล้างการแจ้งเตือน"
+            description="ลบประวัติการแจ้งเตือนทั้งหมด"
+            icon={Bell}
+            onPress={() => router.push('/settings/clear-notifications')}
+            isLast
+          />
+        </SectionContainer>
       </ScrollView>
     </SafeAreaView>
   );
 };
-
-const createDefaultNotificationOverrides = (): Partial<GlobalNotificationPreferences> => ({
-  enabled: true,
-  delivery: {
-    push: true,
-    sound: true,
-    vibration: true,
-    badge: true,
-  },
-  smartScheduling: {
-    enabled: true,
-    weatherIntegration: true,
-    seasonalAdjustments: true,
-    batchSimilarNotifications: true,
-    priorityBasedDelivery: true,
-  },
-  timing: {
-    quietHours: {
-      enabled: true,
-      start: '22:00',
-      end: '06:00',
-    },
-    preferredTime: '08:00',
-    daysOfWeek: [0, 1, 2, 3, 4, 5, 6],
-  },
-});
 
 const createStyles = (theme: Theme) =>
   StyleSheet.create({
@@ -740,15 +677,15 @@ const createStyles = (theme: Theme) =>
     scrollContent: {
       paddingHorizontal: theme.spacing(4),
       paddingVertical: theme.spacing(4),
-      gap: theme.spacing(4),
+      paddingBottom: theme.spacing(6),
     },
     profileCard: {
       borderRadius: radius.xl,
+      marginBottom: theme.spacing(4),
     },
     profileHeader: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: theme.spacing(3),
     },
     avatarPlaceholder: {
       width: 56,
@@ -757,6 +694,7 @@ const createStyles = (theme: Theme) =>
       backgroundColor: theme.colors.background.secondary,
       alignItems: 'center',
       justifyContent: 'center',
+      marginRight: theme.spacing(3),
     },
     profileInfo: {
       flex: 1,
@@ -785,25 +723,34 @@ const createStyles = (theme: Theme) =>
     profileBadge: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: theme.spacing(1.5),
     },
     profileBadgeText: {
       fontSize: typography.fontSize.sm,
       color: theme.colors.text.secondary,
+      marginLeft: theme.spacing(1.5),
     },
-    section: {
-      gap: theme.spacing(2),
+  });
+
+const createSectionStyles = (theme: Theme) =>
+  StyleSheet.create({
+    wrapper: {
+      marginBottom: theme.spacing(4),
     },
-    sectionTitle: {
+    title: {
       fontSize: typography.fontSize.lg,
-      fontFamily: typography.fontFamily.medium,
+      fontFamily: typography.fontFamily.semibold,
+      color: theme.colors.text.primary,
+    },
+    description: {
+      marginTop: 6,
+      fontSize: typography.fontSize.sm,
       color: theme.colors.text.secondary,
     },
-    sectionCard: {
-      backgroundColor: theme.colors.surface.primary,
+    card: {
       borderRadius: radius.lg,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: theme.colors.divider,
+      backgroundColor: theme.colors.surface.primary,
       overflow: 'hidden',
     },
   });
@@ -828,7 +775,9 @@ const createSettingRowStyles = (theme: Theme, isLast: boolean) =>
       width: 40,
       height: 40,
       borderRadius: radius.md,
-      backgroundColor: theme.colors.background.secondary,
+      backgroundColor: theme.isDark
+        ? theme.colors.background.secondary
+        : theme.colors.primarySoft,
       alignItems: 'center',
       justifyContent: 'center',
       marginRight: theme.spacing(3),
@@ -844,10 +793,13 @@ const createSettingRowStyles = (theme: Theme, isLast: boolean) =>
     rowDescription: {
       marginTop: 4,
       fontSize: typography.fontSize.sm,
-      color: theme.colors.text.secondary,
+      color: theme.colors.text.tertiary,
     },
     accessoryContainer: {
       marginLeft: theme.spacing(3),
+    },
+    chevronContainer: {
+      marginLeft: theme.spacing(1.5),
     },
   });
 
@@ -855,16 +807,18 @@ const createOptionStyles = (theme: Theme) =>
   StyleSheet.create({
     groupContainer: {
       flexDirection: 'row',
-      gap: theme.spacing(1),
+      flexWrap: 'wrap',
       alignItems: 'center',
     },
     optionButton: {
-      paddingHorizontal: theme.spacing(2),
+      paddingHorizontal: theme.spacing(2.5),
       paddingVertical: theme.spacing(1.5),
       borderRadius: radius.md,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: theme.colors.divider,
-      backgroundColor: theme.colors.surface.primary,
+      backgroundColor: theme.colors.background.secondary,
+      marginRight: theme.spacing(1.5),
+      marginBottom: theme.spacing(1.5),
     },
     optionButtonActive: {
       backgroundColor: theme.colors.primarySoft,

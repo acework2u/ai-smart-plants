@@ -1,11 +1,12 @@
-import * as Notifications from 'expo-notifications';
+import type { NotificationTriggerInput } from 'expo-notifications';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ActivityKind } from '../types/activity';
 import { Plant } from '../types/garden';
+import { notificationsModule as Notifications } from './notifications/adapter';
 
 // Configure notification behavior
-Notifications.setNotificationHandler({
+Notifications?.setNotificationHandler?.({
   handleNotification: async () => ({
     shouldShowAlert: true,
     shouldPlaySound: true,
@@ -92,6 +93,11 @@ export class NotificationScheduler {
 
   // Request notification permissions
   async requestPermissions(): Promise<boolean> {
+    if (!Notifications?.getPermissionsAsync || !Notifications.requestPermissionsAsync) {
+      console.warn('[notifications] Permissions APIs unavailable.');
+      return false;
+    }
+
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
 
@@ -100,7 +106,11 @@ export class NotificationScheduler {
       finalStatus = status;
     }
 
-    if (Platform.OS === 'android') {
+    if (
+      Platform.OS === 'android' &&
+      Notifications.setNotificationChannelAsync &&
+      Notifications.AndroidImportance
+    ) {
       await Notifications.setNotificationChannelAsync('default', {
         name: 'Smart Plant Care',
         importance: Notifications.AndroidImportance.MAX,
@@ -154,6 +164,11 @@ export class NotificationScheduler {
 
     if (!trigger) return null;
 
+    if (!Notifications?.scheduleNotificationAsync) {
+      console.warn('[notifications] scheduleNotificationAsync unavailable – skip watering reminder.');
+      return null;
+    }
+
     const notificationId = await Notifications.scheduleNotificationAsync({
       content: {
         title: `🌱 เวลารดน้ำ ${plant.name}`,
@@ -179,13 +194,17 @@ export class NotificationScheduler {
       return null;
     }
 
-    const intervalDays = this.getIntervalDays(prefs.fertilizingReminder.interval);
     const trigger = this.calculateTriggerTime(
       prefs.fertilizingReminder.interval,
       prefs.fertilizingReminder.time
     );
 
     if (!trigger) return null;
+
+    if (!Notifications?.scheduleNotificationAsync) {
+      console.warn('[notifications] scheduleNotificationAsync unavailable – skip fertilizer reminder.');
+      return null;
+    }
 
     const notificationId = await Notifications.scheduleNotificationAsync({
       content: {
@@ -212,13 +231,17 @@ export class NotificationScheduler {
       return null;
     }
 
-    const intervalDays = this.getIntervalDays(prefs.healthCheckReminder.interval);
     const trigger = this.calculateTriggerTime(
       prefs.healthCheckReminder.interval,
       prefs.healthCheckReminder.time
     );
 
     if (!trigger) return null;
+
+    if (!Notifications?.scheduleNotificationAsync) {
+      console.warn('[notifications] scheduleNotificationAsync unavailable – skip health check reminder.');
+      return null;
+    }
 
     const notificationId = await Notifications.scheduleNotificationAsync({
       content: {
@@ -239,6 +262,11 @@ export class NotificationScheduler {
 
   // Schedule achievement notification
   async scheduleAchievementNotification(title: string, body: string, plantId?: string): Promise<string | null> {
+    if (!Notifications?.scheduleNotificationAsync) {
+      console.warn('[notifications] scheduleNotificationAsync unavailable – skip achievement notification.');
+      return null;
+    }
+
     const notificationId = await Notifications.scheduleNotificationAsync({
       content: {
         title: `🏆 ${title}`,
@@ -258,7 +286,19 @@ export class NotificationScheduler {
 
   // Cancel all notifications for a plant
   async cancelPlantNotifications(plantId: string): Promise<void> {
-    const allNotifications = await Notifications.getAllScheduledNotificationsAsync();
+    if (!Notifications?.getAllScheduledNotificationsAsync) {
+      console.warn('[notifications] getAllScheduledNotificationsAsync unavailable – nothing to cancel.');
+      return;
+    }
+
+    const allNotifications = Notifications?.getAllScheduledNotificationsAsync
+      ? await Notifications.getAllScheduledNotificationsAsync()
+      : [];
+
+    if (!Notifications?.cancelScheduledNotificationAsync) {
+      console.warn('[notifications] cancelScheduledNotificationAsync unavailable – cannot cancel plant notifications.');
+      return;
+    }
     const plantNotifications = allNotifications.filter(
       notif => notif.content.data?.plantId === plantId
     );
@@ -270,11 +310,20 @@ export class NotificationScheduler {
 
   // Cancel specific notification
   async cancelNotification(notificationId: string): Promise<void> {
+    if (!Notifications?.cancelScheduledNotificationAsync) {
+      console.warn('[notifications] cancelScheduledNotificationAsync unavailable.');
+      return;
+    }
+
     await Notifications.cancelScheduledNotificationAsync(notificationId);
   }
 
   // Get all scheduled notifications for a plant
   async getPlantNotifications(plantId: string): Promise<ScheduledNotification[]> {
+    if (!Notifications?.getAllScheduledNotificationsAsync) {
+      return [];
+    }
+
     const allNotifications = await Notifications.getAllScheduledNotificationsAsync();
     return allNotifications
       .filter(notif => notif.content.data?.plantId === plantId)
@@ -305,7 +354,7 @@ export class NotificationScheduler {
     interval: string,
     time: string,
     customDays?: number
-  ): Notifications.NotificationTriggerInput | null {
+  ): NotificationTriggerInput | null {
     const [hours, minutes] = time.split(':').map(Number);
     const now = new Date();
     const triggerDate = new Date();
@@ -317,44 +366,13 @@ export class NotificationScheduler {
       triggerDate.setDate(triggerDate.getDate() + 1);
     }
 
-    let intervalDays = 1;
-    switch (interval) {
-      case 'daily':
-        intervalDays = 1;
-        break;
-      case 'every2days':
-        intervalDays = 2;
-        break;
-      case 'weekly':
-        intervalDays = 7;
-        break;
-      case 'biweekly':
-        intervalDays = 14;
-        break;
-      case 'monthly':
-        intervalDays = 30;
-        break;
-      case 'custom':
-        intervalDays = customDays || 1;
-        break;
-    }
-
-    return {
+    const trigger: NotificationTriggerInput = {
       type: 'date',
       date: triggerDate,
       repeats: true,
-    } as Notifications.DateTriggerInput;
-  }
+    };
 
-  private getIntervalDays(interval: string): number {
-    switch (interval) {
-      case 'daily': return 1;
-      case 'every2days': return 2;
-      case 'weekly': return 7;
-      case 'biweekly': return 14;
-      case 'monthly': return 30;
-      default: return 7;
-    }
+    return trigger;
   }
 
   // Check if current time is in Do Not Disturb period
@@ -389,7 +407,9 @@ export class NotificationScheduler {
     }
 
     // Cancel all existing notifications
-    await Notifications.cancelAllScheduledNotificationsAsync();
+    if (Notifications?.cancelAllScheduledNotificationsAsync) {
+      await Notifications.cancelAllScheduledNotificationsAsync();
+    }
 
     // Schedule notifications for each plant
     for (const plant of plants) {
