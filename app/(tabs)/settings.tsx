@@ -1,17 +1,8 @@
-import React, { useCallback, useMemo } from 'react';
-import {
-  Pressable,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  View,
-} from 'react-native';
+import { useRouter } from 'expo-router';
 import {
   Bell,
-  Clock,
   ChevronRight,
+  Clock,
   CloudDownload,
   Database,
   Droplet,
@@ -19,23 +10,36 @@ import {
   Languages,
   Lock,
   MoonStar,
+  Palette,
   RefreshCw,
   Scale,
+  Settings2,
   ShieldCheck,
   SlidersHorizontal,
+  Sparkles,
   Sun,
   SunMoon,
   ThermometerSun,
+  User,
   Vibrate,
 } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
+import React, { useCallback, useMemo, useRef } from 'react';
+import {
+  Animated,
+  Pressable,
+  StyleSheet,
+  Switch,
+  Text,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '../../components/atoms/Card';
 import { useTheme, type Theme } from '../../contexts/ThemeContext';
-import { radius, typography } from '../../core/theme';
-import { usePreferencesStore } from '../../stores/preferences';
-import { useNotificationStore } from '../../stores/notificationStore';
-import { useUser } from '../../stores/userStore';
 import { useHaptic } from '../../core/haptics';
+import { radius, typography } from '../../core/theme';
+import { useNotificationStore } from '../../stores/notificationStore';
+import { usePreferencesStore } from '../../stores/preferences';
+import { useUser } from '../../stores/userStore';
 
 type ThemeOption = 'light' | 'dark' | 'system';
 type LanguageOption = 'th' | 'en';
@@ -88,19 +92,40 @@ const SettingRow: React.FC<SettingRowProps> = ({
   const { theme } = useTheme();
   const styles = useMemo(() => createSettingRowStyles(theme, isLast), [theme, isLast]);
   const showChevron = Boolean(onPress && !accessory);
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = useCallback(() => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.98,
+      useNativeDriver: true,
+      speed: 50,
+      bounciness: 0,
+    }).start();
+  }, [scaleAnim]);
+
+  const handlePressOut = useCallback(() => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 20,
+      bounciness: 0,
+    }).start();
+  }, [scaleAnim]);
 
   const trailing = accessory ? (
-    <View style={styles.accessoryContainer}>{accessory}</View>
+    <Animated.View style={[styles.accessoryContainer, { transform: [{ scale: scaleAnim }] }]}>
+      {accessory}
+    </Animated.View>
   ) : showChevron ? (
     <View style={styles.chevronContainer}>
-      <ChevronRight size={18} color={theme.colors.text.tertiary} />
+      <ChevronRight size={20} color={theme.colors.text.tertiary} />
     </View>
   ) : null;
 
   const content = (
     <View style={styles.rowContent}>
       <View style={styles.iconContainer}>
-        <Icon size={20} color={theme.colors.text.primary} />
+        <Icon size={22} color={theme.isDark ? theme.colors.primarySoft : theme.colors.primary} />
       </View>
       <View style={styles.rowTextContainer}>
         <Text style={styles.rowTitle}>{title}</Text>
@@ -115,10 +140,14 @@ const SettingRow: React.FC<SettingRowProps> = ({
       <Pressable
         style={[styles.rowWrapper, disabled && styles.rowDisabled]}
         onPress={disabled ? undefined : onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
         android_ripple={{ color: theme.colors.background.overlayLight }}
         accessibilityRole="button"
       >
-        {content}
+        <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+          {content}
+        </Animated.View>
       </Pressable>
     );
   }
@@ -174,15 +203,41 @@ interface SectionContainerProps {
 const SectionContainer: React.FC<SectionContainerProps> = ({ title, description, children }) => {
   const { theme } = useTheme();
   const styles = useMemo(() => createSectionStyles(theme), [theme]);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(20)).current;
+
+  React.useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+      Animated.spring(translateY, {
+        toValue: 0,
+        useNativeDriver: true,
+        speed: 12,
+        bounciness: 5,
+      }),
+    ]).start();
+  }, [fadeAnim, translateY]);
 
   return (
-    <View style={styles.wrapper}>
+    <Animated.View
+      style={[
+        styles.wrapper,
+        {
+          opacity: fadeAnim,
+          transform: [{ translateY }],
+        },
+      ]}
+    >
       <Text style={styles.title}>{title}</Text>
       {description ? <Text style={styles.description}>{description}</Text> : null}
-      <Card variant="flat" style={styles.card} padding={0} shadowLevel="sm">
+      <Card variant="elevated" style={styles.card} padding={0} shadowLevel="md">
         {children}
       </Card>
-    </View>
+    </Animated.View>
   );
 };
 
@@ -372,39 +427,85 @@ const SettingsScreen: React.FC = () => {
       })
     : 'ยังไม่ระบุ';
 
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const headerOpacity = scrollY.interpolate({
+    inputRange: [0, 100],
+    outputRange: [1, 0.95],
+    extrapolate: 'clamp',
+  });
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView
+      <Animated.View style={[styles.headerContainer, { opacity: headerOpacity }]}>
+        <View style={styles.header}>
+          <Settings2 size={24} color={theme.colors.primary} />
+          <Text style={styles.headerTitle}>การตั้งค่า</Text>
+          <View style={styles.headerBadge}>
+            <Sparkles size={16} color={theme.colors.warning} />
+          </View>
+        </View>
+      </Animated.View>
+
+      <Animated.ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: true }
+        )}
+        scrollEventThrottle={16}
       >
-        <Card variant="elevated" style={styles.profileCard} shadowLevel="md">
+        <Card variant="elevated" style={styles.profileCard} shadowLevel="lg">
+          <View style={styles.profileGradient}>
+            <View style={styles.profilePattern} />
+          </View>
           <View style={styles.profileHeader}>
-            <View style={styles.avatarPlaceholder}>
-              <ShieldCheck size={28} color={theme.colors.primary} />
+            <View style={styles.avatarContainer}>
+              <View style={styles.avatarPlaceholder}>
+                <User size={32} color={theme.colors.white} />
+              </View>
+              <View style={styles.avatarBadge}>
+                <ShieldCheck size={14} color={theme.colors.white} />
+              </View>
             </View>
             <View style={styles.profileInfo}>
               <Text style={styles.profileName}>{user?.name ?? 'นักปลูกต้นไม้'}</Text>
               <Text style={styles.profileEmail}>{user?.email ?? 'ยังไม่ได้ตั้งค่าอีเมล'}</Text>
-              <Text style={styles.profileMeta}>เข้าร่วมเมื่อ {joinDate}</Text>
+              <View style={styles.profileStats}>
+                <View style={styles.profileStat}>
+                  <Text style={styles.profileStatValue}>12</Text>
+                  <Text style={styles.profileStatLabel}>ต้นไม้</Text>
+                </View>
+                <View style={styles.profileStatDivider} />
+                <View style={styles.profileStat}>
+                  <Text style={styles.profileStatValue}>45</Text>
+                  <Text style={styles.profileStatLabel}>วันดูแล</Text>
+                </View>
+                <View style={styles.profileStatDivider} />
+                <View style={styles.profileStat}>
+                  <Text style={styles.profileStatValue}>89%</Text>
+                  <Text style={styles.profileStatLabel}>สุขภาพ</Text>
+                </View>
+              </View>
             </View>
           </View>
           <View style={styles.profileFooter}>
             <View style={styles.profileBadge}>
-              <Lock size={16} color={theme.colors.text.secondary} />
-              <Text style={styles.profileBadgeText}>ข้อมูลของคุณถูกเข้ารหัส</Text>
+              <Lock size={14} color={theme.colors.success} />
+              <Text style={styles.profileBadgeText}>ข้อมูลปลอดภัย</Text>
             </View>
+            <Text style={styles.profileJoinDate}>เข้าร่วม {joinDate}</Text>
           </View>
         </Card>
 
         <SectionContainer
-          title="การตั้งค่าทั่วไป"
-          description="ปรับพื้นฐานการใช้งานให้ตรงกับสไตล์ของคุณ"
+          title="✨ การตั้งค่าทั่วไป"
+          description="ปรับแต่งแอปให้เป็นสไตล์ของคุณ"
         >
           <SettingRow
             title="ธีมแอป"
-            description="เลือกโหมดการแสดงผลที่เหมาะกับคุณ"
-            icon={SunMoon}
+            description="เลือกโหมดแสงสว่างหรือมืด"
+            icon={Palette}
             accessory={
               <OptionGroup<ThemeOption>
                 value={themePreference}
@@ -441,8 +542,8 @@ const SettingsScreen: React.FC = () => {
         </SectionContainer>
 
         <SectionContainer
-          title="หน่วยวัด"
-          description="กำหนดหน่วยที่คุ้นเคยเพื่อความแม่นยำในการดูแล"
+          title="📏 หน่วยวัด"
+          description="เลือกหน่วยที่คุณถนัดเพื่อความแม่นยำ"
         >
           <SettingRow
             title="ปริมาณน้ำ"
@@ -492,8 +593,8 @@ const SettingsScreen: React.FC = () => {
         </SectionContainer>
 
         <SectionContainer
-          title="การแจ้งเตือน"
-          description="เลือกรูปแบบและช่วงเวลาที่อยากรับการเตือน"
+          title="🔔 การแจ้งเตือน"
+          description="จัดการการแจ้งเตือนให้ตรงใจคุณ"
         >
           <SettingRow
             title="เปิดใช้งานการแจ้งเตือน"
@@ -528,7 +629,7 @@ const SettingsScreen: React.FC = () => {
             icon={Clock}
             accessory={
               <OptionGroup<string>
-                value={globalNotificationPreferences.timing.preferredTime}
+                value={globalNotificationPreferences.timing?.preferredTime || '07:00'}
                 options={preferredTimeOptions}
                 onChange={handlePreferredTimeChange}
                 disabled={!globalNotificationPreferences.enabled}
@@ -567,8 +668,8 @@ const SettingsScreen: React.FC = () => {
         </SectionContainer>
 
         <SectionContainer
-          title="AI & ความเป็นส่วนตัว"
-          description="ควบคุมข้อมูลและคำแนะนำเฉพาะสำหรับคุณ"
+          title="🤖 AI & ความเป็นส่วนตัว"
+          description="จัดการข้อมูลและคำแนะนำอัจฉริยะ"
         >
           <SettingRow
             title="คำแนะนำ AI ส่วนบุคคล"
@@ -640,8 +741,8 @@ const SettingsScreen: React.FC = () => {
         </SectionContainer>
 
         <SectionContainer
-          title="ข้อมูลและการบำรุงรักษา"
-          description="จัดการข้อมูลที่บันทึกไว้บนอุปกรณ์นี้"
+          title="💾 ข้อมูลและบำรุงรักษา"
+          description="จัดการข้อมูลบนอุปกรณ์ของคุณ"
         >
           <SettingRow
             title="สำรองข้อมูลผู้ใช้"
@@ -663,7 +764,11 @@ const SettingsScreen: React.FC = () => {
             isLast
           />
         </SectionContainer>
-      </ScrollView>
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>Smart Plant Care v1.0.0</Text>
+          <Text style={styles.footerSubtext}>Made with 💚 for plant lovers</Text>
+        </View>
+      </Animated.ScrollView>
     </SafeAreaView>
   );
 };
@@ -674,40 +779,126 @@ const createStyles = (theme: Theme) =>
       flex: 1,
       backgroundColor: theme.colors.background.primary,
     },
-    scrollContent: {
+    headerContainer: {
       paddingHorizontal: theme.spacing(4),
-      paddingVertical: theme.spacing(4),
-      paddingBottom: theme.spacing(6),
+      paddingTop: theme.spacing(2),
+      paddingBottom: theme.spacing(1),
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    headerTitle: {
+      fontSize: typography.fontSize.xl,
+      fontFamily: typography.fontFamily.bold,
+      color: theme.colors.text.primary,
+      marginHorizontal: theme.spacing(2),
+    },
+    headerBadge: {
+      padding: theme.spacing(1),
+    },
+    scrollContent: {
+      paddingHorizontal: theme.spacing(3),
+      paddingTop: theme.spacing(2),
+      paddingBottom: theme.spacing(10),
     },
     profileCard: {
-      borderRadius: radius.xl,
-      marginBottom: theme.spacing(4),
+      borderRadius: radius['2xl'],
+      marginBottom: theme.spacing(5),
+      overflow: 'hidden',
+    },
+    profileGradient: {
+      height: 60,
+      backgroundColor: theme.isDark ? theme.colors.primary : theme.colors.primarySoft,
+      position: 'relative' as const,
+    },
+    profilePattern: {
+      position: 'absolute' as const,
+      top: 0,
+      right: 0,
+      width: 100,
+      height: 60,
+      backgroundColor: theme.colors.white,
+      opacity: 0.05,
+      transform: [{ rotate: '45deg' }],
     },
     profileHeader: {
       flexDirection: 'row',
-      alignItems: 'center',
+      alignItems: 'flex-start',
+      paddingHorizontal: theme.spacing(4),
+      paddingTop: theme.spacing(3),
+      marginTop: -30,
+    },
+    avatarContainer: {
+      position: 'relative' as const,
     },
     avatarPlaceholder: {
-      width: 56,
-      height: 56,
+      width: 72,
+      height: 72,
       borderRadius: radius.full,
-      backgroundColor: theme.colors.background.secondary,
+      backgroundColor: theme.colors.primary,
       alignItems: 'center',
       justifyContent: 'center',
-      marginRight: theme.spacing(3),
+      borderWidth: 4,
+      borderColor: theme.colors.surface.primary,
+      elevation: 4,
+      shadowColor: theme.colors.black,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+    },
+    avatarBadge: {
+      position: 'absolute' as const,
+      bottom: 0,
+      right: 0,
+      width: 24,
+      height: 24,
+      borderRadius: radius.full,
+      backgroundColor: theme.colors.success,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 2,
+      borderColor: theme.colors.surface.primary,
     },
     profileInfo: {
       flex: 1,
+      marginLeft: theme.spacing(3),
+      paddingTop: theme.spacing(2),
     },
     profileName: {
       fontFamily: typography.fontFamily.bold,
       fontSize: typography.fontSize['2xl'],
       color: theme.colors.text.primary,
+      marginBottom: theme.spacing(0.5),
     },
     profileEmail: {
-      marginTop: 4,
       fontSize: typography.fontSize.sm,
       color: theme.colors.text.secondary,
+      marginBottom: theme.spacing(2),
+    },
+    profileStats: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    profileStat: {
+      alignItems: 'center',
+    },
+    profileStatValue: {
+      fontSize: typography.fontSize.lg,
+      fontFamily: typography.fontFamily.bold,
+      color: theme.colors.primary,
+    },
+    profileStatLabel: {
+      fontSize: typography.fontSize.xs,
+      color: theme.colors.text.tertiary,
+      marginTop: 2,
+    },
+    profileStatDivider: {
+      width: 1,
+      height: 30,
+      backgroundColor: theme.colors.divider,
+      marginHorizontal: theme.spacing(3),
     },
     profileMeta: {
       marginTop: 2,
@@ -715,10 +906,15 @@ const createStyles = (theme: Theme) =>
       color: theme.colors.text.tertiary,
     },
     profileFooter: {
-      marginTop: theme.spacing(3),
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginTop: theme.spacing(2),
+      paddingTop: theme.spacing(3),
+      paddingHorizontal: theme.spacing(4),
+      paddingBottom: theme.spacing(3),
       borderTopWidth: StyleSheet.hairlineWidth,
       borderTopColor: theme.colors.divider,
-      paddingTop: theme.spacing(3),
     },
     profileBadge: {
       flexDirection: 'row',
@@ -727,54 +923,77 @@ const createStyles = (theme: Theme) =>
     profileBadgeText: {
       fontSize: typography.fontSize.sm,
       color: theme.colors.text.secondary,
-      marginLeft: theme.spacing(1.5),
+      marginLeft: theme.spacing(1),
+    },
+    profileJoinDate: {
+      fontSize: typography.fontSize.xs,
+      color: theme.colors.text.tertiary,
+    },
+    footer: {
+      alignItems: 'center',
+      paddingVertical: theme.spacing(4),
+      marginTop: theme.spacing(2),
+    },
+    footerText: {
+      fontSize: typography.fontSize.sm,
+      fontFamily: typography.fontFamily.medium,
+      color: theme.colors.text.secondary,
+    },
+    footerSubtext: {
+      fontSize: typography.fontSize.xs,
+      color: theme.colors.text.tertiary,
+      marginTop: theme.spacing(1),
     },
   });
 
 const createSectionStyles = (theme: Theme) =>
   StyleSheet.create({
     wrapper: {
-      marginBottom: theme.spacing(4),
+      marginBottom: theme.spacing(5),
     },
     title: {
-      fontSize: typography.fontSize.lg,
-      fontFamily: typography.fontFamily.semibold,
+      fontSize: typography.fontSize.xl,
+      fontFamily: typography.fontFamily.bold,
       color: theme.colors.text.primary,
+      marginBottom: theme.spacing(1),
     },
     description: {
-      marginTop: 6,
       fontSize: typography.fontSize.sm,
       color: theme.colors.text.secondary,
+      marginBottom: theme.spacing(3),
     },
     card: {
-      borderRadius: radius.lg,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: theme.colors.divider,
+      borderRadius: radius.xl,
       backgroundColor: theme.colors.surface.primary,
       overflow: 'hidden',
+      elevation: 2,
+      shadowColor: theme.colors.black,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 3,
     },
   });
 
 const createSettingRowStyles = (theme: Theme, isLast: boolean) =>
   StyleSheet.create({
     rowWrapper: {
-      paddingHorizontal: theme.spacing(3),
+      paddingHorizontal: theme.spacing(4),
       backgroundColor: theme.colors.surface.primary,
     },
     rowDisabled: {
-      opacity: 0.6,
+      opacity: 0.5,
     },
     rowContent: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingVertical: theme.spacing(3),
+      paddingVertical: theme.spacing(3.5),
       borderBottomWidth: isLast ? 0 : StyleSheet.hairlineWidth,
       borderBottomColor: theme.colors.divider,
     },
     iconContainer: {
-      width: 40,
-      height: 40,
-      borderRadius: radius.md,
+      width: 44,
+      height: 44,
+      borderRadius: radius.lg,
       backgroundColor: theme.isDark
         ? theme.colors.background.secondary
         : theme.colors.primarySoft,
@@ -784,22 +1003,26 @@ const createSettingRowStyles = (theme: Theme, isLast: boolean) =>
     },
     rowTextContainer: {
       flex: 1,
+      justifyContent: 'center',
     },
     rowTitle: {
       fontSize: typography.fontSize.base,
       color: theme.colors.text.primary,
-      fontFamily: typography.fontFamily.medium,
+      fontFamily: typography.fontFamily.semibold,
+      marginBottom: 2,
     },
     rowDescription: {
-      marginTop: 4,
       fontSize: typography.fontSize.sm,
       color: theme.colors.text.tertiary,
+      lineHeight: 18,
     },
     accessoryContainer: {
-      marginLeft: theme.spacing(3),
+      marginLeft: theme.spacing(2),
+      flexShrink: 0,
     },
     chevronContainer: {
-      marginLeft: theme.spacing(1.5),
+      marginLeft: theme.spacing(2),
+      opacity: 0.5,
     },
   });
 
@@ -809,31 +1032,36 @@ const createOptionStyles = (theme: Theme) =>
       flexDirection: 'row',
       flexWrap: 'wrap',
       alignItems: 'center',
+      gap: theme.spacing(1.5),
     },
     optionButton: {
-      paddingHorizontal: theme.spacing(2.5),
-      paddingVertical: theme.spacing(1.5),
-      borderRadius: radius.md,
-      borderWidth: StyleSheet.hairlineWidth,
+      paddingHorizontal: theme.spacing(3),
+      paddingVertical: theme.spacing(2),
+      borderRadius: radius.lg,
+      borderWidth: 1.5,
       borderColor: theme.colors.divider,
       backgroundColor: theme.colors.background.secondary,
-      marginRight: theme.spacing(1.5),
-      marginBottom: theme.spacing(1.5),
     },
     optionButtonActive: {
-      backgroundColor: theme.colors.primarySoft,
+      backgroundColor: theme.isDark ? theme.colors.primary : theme.colors.primarySoft,
       borderColor: theme.colors.primary,
+      elevation: 1,
+      shadowColor: theme.colors.primary,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.1,
+      shadowRadius: 2,
     },
     optionButtonDisabled: {
-      opacity: 0.5,
+      opacity: 0.4,
     },
     optionLabel: {
       fontSize: typography.fontSize.sm,
       color: theme.colors.text.secondary,
-      fontFamily: typography.fontFamily.medium,
+      fontFamily: typography.fontFamily.semibold,
     },
     optionLabelActive: {
-      color: theme.colors.primary,
+      color: theme.isDark ? theme.colors.white : theme.colors.primary,
+      fontFamily: typography.fontFamily.bold,
     },
   });
 

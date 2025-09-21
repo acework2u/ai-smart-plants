@@ -83,3 +83,7 @@ build-*/
 .cache-*/
 .cache-*/
 .cache-*/
+
+
+/* ennvironment files */
+*.env

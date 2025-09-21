@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "554403526958",
+    "project_id": "smart-garden-ai-ded16",
+    "storage_bucket": "smart-garden-ai-ded16.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:554403526958:android:4bfbe59cf0bf6de0e722bf",
+        "android_client_info": {
+          "package_name": "com.aceworkai.smartgardenapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBFLTh7NXhBRdqGKlEllDyejj68M7QTSkw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
