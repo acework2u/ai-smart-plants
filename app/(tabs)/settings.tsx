@@ -166,15 +166,21 @@ const OptionGroup = <T extends string>({ value, options, onChange, disabled }: O
   const { theme } = useTheme();
   const styles = useMemo(() => createOptionStyles(theme), [theme]);
 
+  // For 3+ options, use vertical layout
+  const useVerticalLayout = options.length >= 3;
+
   return (
-    <View style={styles.groupContainer}>
-      {options.map((option) => {
+    <View style={[styles.groupContainer, useVerticalLayout && styles.groupVertical]}>
+      {options.map((option, index) => {
         const isActive = option.value === value;
+        const isLast = index === options.length - 1;
         return (
           <Pressable
             key={option.value}
             style={[
               styles.optionButton,
+              useVerticalLayout && styles.optionButtonVertical,
+              useVerticalLayout && !isLast && styles.optionButtonWithBorder,
               isActive && styles.optionButtonActive,
               disabled && styles.optionButtonDisabled,
             ]}
@@ -182,11 +188,17 @@ const OptionGroup = <T extends string>({ value, options, onChange, disabled }: O
             android_ripple={{ color: theme.colors.background.overlayLight, borderless: true }}
             accessibilityRole="button"
           >
-            <Text style={[styles.optionLabel, isActive && styles.optionLabelActive]}>
-              {option.icon}
-              {option.icon ? ' ' : ''}
-              {option.label}
-            </Text>
+            <View style={styles.optionContent}>
+              {option.icon && <View style={styles.optionIcon}>{option.icon}</View>}
+              <Text style={[styles.optionLabel, isActive && styles.optionLabelActive]}>
+                {option.label}
+              </Text>
+              {isActive && (
+                <View style={styles.checkMark}>
+                  <Text style={styles.checkMarkText}>✓</Text>
+                </View>
+              )}
+            </View>
           </Pressable>
         );
       })}
@@ -985,10 +997,11 @@ const createSettingRowStyles = (theme: Theme, isLast: boolean) =>
     },
     rowContent: {
       flexDirection: 'row',
-      alignItems: 'center',
+      alignItems: 'flex-start',
       paddingVertical: theme.spacing(3.5),
       borderBottomWidth: isLast ? 0 : StyleSheet.hairlineWidth,
       borderBottomColor: theme.colors.divider,
+      minHeight: 60,
     },
     iconContainer: {
       width: 44,
@@ -1004,6 +1017,7 @@ const createSettingRowStyles = (theme: Theme, isLast: boolean) =>
     rowTextContainer: {
       flex: 1,
       justifyContent: 'center',
+      paddingRight: theme.spacing(2),
     },
     rowTitle: {
       fontSize: typography.fontSize.base,
@@ -1019,6 +1033,8 @@ const createSettingRowStyles = (theme: Theme, isLast: boolean) =>
     accessoryContainer: {
       marginLeft: theme.spacing(2),
       flexShrink: 0,
+      maxWidth: '50%',
+      minWidth: 120,
     },
     chevronContainer: {
       marginLeft: theme.spacing(2),
@@ -1034,6 +1050,15 @@ const createOptionStyles = (theme: Theme) =>
       alignItems: 'center',
       gap: theme.spacing(1.5),
     },
+    groupVertical: {
+      flexDirection: 'column',
+      gap: 0,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor: theme.colors.divider,
+      backgroundColor: theme.colors.background.secondary,
+      overflow: 'hidden',
+    },
     optionButton: {
       paddingHorizontal: theme.spacing(3),
       paddingVertical: theme.spacing(2),
@@ -1041,6 +1066,20 @@ const createOptionStyles = (theme: Theme) =>
       borderWidth: 1.5,
       borderColor: theme.colors.divider,
       backgroundColor: theme.colors.background.secondary,
+      minWidth: 80,
+    },
+    optionButtonVertical: {
+      paddingHorizontal: theme.spacing(4),
+      paddingVertical: theme.spacing(3),
+      borderRadius: 0,
+      borderWidth: 0,
+      backgroundColor: 'transparent',
+      minWidth: 0,
+      width: '100%',
+    },
+    optionButtonWithBorder: {
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: theme.colors.divider,
     },
     optionButtonActive: {
       backgroundColor: theme.isDark ? theme.colors.primary : theme.colors.primarySoft,
@@ -1054,13 +1093,37 @@ const createOptionStyles = (theme: Theme) =>
     optionButtonDisabled: {
       opacity: 0.4,
     },
+    optionContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      flex: 1,
+    },
+    optionIcon: {
+      marginRight: theme.spacing(2),
+    },
     optionLabel: {
       fontSize: typography.fontSize.sm,
       color: theme.colors.text.secondary,
       fontFamily: typography.fontFamily.semibold,
+      flex: 1,
     },
     optionLabelActive: {
       color: theme.isDark ? theme.colors.white : theme.colors.primary,
+      fontFamily: typography.fontFamily.bold,
+    },
+    checkMark: {
+      width: 20,
+      height: 20,
+      borderRadius: radius.full,
+      backgroundColor: theme.colors.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginLeft: theme.spacing(2),
+    },
+    checkMarkText: {
+      color: theme.colors.white,
+      fontSize: typography.fontSize.xs,
       fontFamily: typography.fontFamily.bold,
     },
   });
