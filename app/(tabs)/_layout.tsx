@@ -4,8 +4,11 @@ import React, { useCallback, useMemo } from 'react';
 import { Platform } from 'react-native';
 import { hapticService } from '../../core/haptics';
 import { colors, getSpacing } from '../../core/theme';
+import { useTranslation } from '../../contexts/I18nContext';
 
 function TabLayoutInner() {
+  const { t } = useTranslation();
+
   const handleTabPress = useCallback(() => {
     hapticService.tabSwitch();
   }, []);
@@ -29,12 +32,23 @@ function TabLayoutInner() {
     headerShown: false,
   }), []);
 
+  const labels = useMemo(
+    () => ({
+      home: t('tabs.home'),
+      garden: t('tabs.garden'),
+      insights: t('tabs.insights'),
+      settings: t('tabs.settings'),
+    }),
+    [t]
+  );
+
   return (
     <Tabs screenOptions={screenOptions} screenListeners={{ tabPress: handleTabPress }}>
       <Tabs.Screen
         name="index"
         options={{
-          title: 'หน้าแรก',
+          title: labels.home,
+          tabBarLabel: labels.home,
           tabBarIcon: ({ color, size }) => (
             <Home size={size} color={color} />
           ),
@@ -43,7 +57,8 @@ function TabLayoutInner() {
       <Tabs.Screen
         name="garden"
         options={{
-          title: 'สวนของฉัน',
+          title: labels.garden,
+          tabBarLabel: labels.garden,
           tabBarIcon: ({ color, size }) => (
             <Leaf size={size} color={color} />
           ),
@@ -52,7 +67,8 @@ function TabLayoutInner() {
       <Tabs.Screen
         name="insights"
         options={{
-          title: 'ข้อมูลเชิงลึก',
+          title: labels.insights,
+          tabBarLabel: labels.insights,
           tabBarIcon: ({ color, size }) => (
             <BarChart3 size={size} color={color} />
           ),
@@ -61,7 +77,8 @@ function TabLayoutInner() {
       <Tabs.Screen
         name="settings"
         options={{
-          title: 'การตั้งค่า',
+          title: labels.settings,
+          tabBarLabel: labels.settings,
           tabBarIcon: ({ color, size }) => (
             <Settings size={size} color={color} />
           ),

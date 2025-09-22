@@ -11,6 +11,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_KEYS } from '../types';
 import { ThemeProvider } from '../contexts/ThemeContext';
+import { TranslationProvider } from '../contexts/I18nContext';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -82,7 +83,8 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ThemeProvider>
-        <SafeAreaProvider>
+        <TranslationProvider>
+          <SafeAreaProvider>
           <Stack>
             <Stack.Screen name="simple-onboarding" options={{ headerShown: false }} />
             <Stack.Screen name="onboarding" options={{ headerShown: false }} />
@@ -108,6 +110,7 @@ export default function RootLayout() {
           </Stack>
           <StatusBar style="auto" />
         </SafeAreaProvider>
+        </TranslationProvider>
       </ThemeProvider>
     </GestureHandlerRootView>
   );
