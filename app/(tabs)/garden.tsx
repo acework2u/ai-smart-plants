@@ -33,16 +33,18 @@ import {
 import { Button, Chip } from '../../components/atoms';
 import { OptimizedFlatList } from '../../components/atoms/OptimizedFlatList';
 import { PlantCardSkeleton, Skeleton } from '../../components/atoms/Skeleton';
+import { useTranslation } from '../../contexts/I18nContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { getSpacing, radius, typography } from '../../core/theme';
 import {
-  useFilteredPlants,
   useAllPlants,
+  useFilteredPlants,
   useGardenStats,
   useGardenStore,
 } from '../../stores/garden';
 
 export default function GardenScreen() {
+    const { t } = useTranslation();
   const plants = useFilteredPlants(); // Filtered plants for display
   const allPlants = useAllPlants(); // All plants for counting
   const [searchQuery, setSearchQueryLocal] = React.useState('');
@@ -307,9 +309,9 @@ export default function GardenScreen() {
 
   const getGreeting = useMemo(() => {
     const hour = new Date().getHours();
-    if (hour < 12) return 'สวัสดีตอนเช้า';
-    if (hour < 18) return 'สวัสดีตอนบ่าย';
-    return 'สวัสดีตอนเย็น';
+    if (hour < 12) return t('greeting.morning');
+    if (hour < 18) return t('greeting.afternoon');
+    return hour < 22 ? t('greeting.evening') : t('greeting.night');
   }, []);
 
   const getQuickAction = useCallback(() => {
@@ -464,7 +466,7 @@ export default function GardenScreen() {
           เพิ่มต้นไม้แรกของคุณเพื่อเริ่มต้นการดูแล
         </Text>
         <Button
-          title="เพิ่มต้นไม้"
+          title={t('gardens.add_plant')}
           onPress={handleAddPlant}
           variant="primary"
           style={styles.emptyButton}
@@ -523,7 +525,7 @@ export default function GardenScreen() {
         <View style={styles.greetingSection}>
           <View style={styles.greetingContent}>
             <Text style={[styles.greetingText, { color: theme.colors.text.tertiary }]}>{getGreeting}</Text>
-            <Text style={[styles.heroTitle, { color: theme.colors.text.primary }]}>สวนของฉัน</Text>
+            <Text style={[styles.heroTitle, { color: theme.colors.text.primary }]}>{t('gardens.my_garden')}</Text>
           </View>
           <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
             <TouchableOpacity

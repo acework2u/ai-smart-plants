@@ -10,6 +10,16 @@ export const translations: Record<SupportedLanguage, TranslationTree> = {
       insights: 'Insights',
       settings: 'Settings',
     },
+    home:{
+      welcome: 'Smart Plant Care',
+      subtitle: 'Here\'s what\'s happening in your garden today.',
+    },
+    gardens:{
+      my_garden: 'My Garden',
+      add_plant: 'Add Plant',
+      empty_title: 'Your garden is looking a bit empty',
+      empty_subtitle: 'Start adding plants to see them here.',
+    },
     settings: {
       hero: {
         eyebrow: 'Your Profile',
@@ -164,6 +174,28 @@ export const translations: Record<SupportedLanguage, TranslationTree> = {
         selectedTime: 'Selected time',
       },
     },
+    greeting:{
+      morning: 'Good morning',
+      afternoon: 'Good afternoon',
+      evening: 'Good evening',
+      night: 'Good night',
+    },
+    quickactions:{
+      herostatus: {
+        all_good: 'All good',
+        attention: 'Needs attention',
+        action_required: 'Action required',
+        critical: 'Critical',
+        critical_title: 'Help Urgently Needed!',
+        critical_context:'Plant needs help',
+        follow: 'Follow',
+        take_care_of: 'Take care of',
+        all:'ทั้งหมด',
+        healthy:'แข็งแรง',
+        warning:'เตือน',
+        needs_watering:'ต้องการรดน้ำ',
+      }
+    }
   },
   th: {
     tabs: {
@@ -171,6 +203,16 @@ export const translations: Record<SupportedLanguage, TranslationTree> = {
       garden: 'สวนของฉัน',
       insights: 'ข้อมูลเชิงลึก',
       settings: 'การตั้งค่า',
+    },
+    home:{
+      welcome: 'Smart Plant Care',
+      subtitle: 'Here\'s what\'s happening in your garden today.',
+    },
+    gardens:{
+      my_garden: 'สวนของฉัน',
+      add_plant: 'เพิ่มต้นไม้',
+      empty_title: 'สวนของคุณดูว่างเปล่าเล็กน้อย',
+      empty_subtitle: 'เริ่มเพิ่มต้นไม้เพื่อดูที่นี่ครับ',
     },
     settings: {
       hero: {
@@ -326,6 +368,28 @@ export const translations: Record<SupportedLanguage, TranslationTree> = {
         selectedTime: 'เวลาที่เลือก',
       },
     },
+    greeting:{
+      morning: 'สวัสดีตอนเช้า',
+      afternoon: 'สวัสดีตอนบ่าย',
+      evening: 'สวัสดีตอนเย็น',
+      night: 'ราตรีสวัสดิ์',
+    },
+    quickactions:{
+      herostatus: {
+        all_good: 'ทุกอย่างเรียบร้อย',
+        attention: 'ต้องการความสนใจ',
+        action_required: 'ต้องการการดำเนินการ',
+        critical: 'วิกฤต',
+        critical_title: 'ช่วยด่วน!',
+        critical_context:'ต้นต้องการความช่วยเหลือ',
+        follow: 'Follow',
+        take_care_of: 'Take care of',
+        all:'ทั้งหมด',
+        healthy:'แข็งแรง',
+        warning:'เตือน',
+        needs_watering:'ต้องการรดน้ำ',
+      }
+    }
   },
 };
 
