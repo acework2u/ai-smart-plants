@@ -17,7 +17,8 @@
       "@controllers/*": ["controllers/*"],
       "@middleware/*": ["middleware/*"],
       "@utils/*": ["utils/*"],
-      "@docs/*": ["docs/*"]
+      "@docs/*": ["docs/*"],
+      "@modules/*": ["modules/*"]
     }
   },
   "include": ["src"],

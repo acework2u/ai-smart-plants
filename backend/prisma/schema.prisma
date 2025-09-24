@@ -1,0 +1,188 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum PlantStatus {
+  healthy
+  warning
+  critical
+  archived
+}
+
+enum ActivityKind {
+  water
+  fertilize
+  spray
+  repot
+  inspect
+}
+
+enum Unit {
+  ml
+  g
+  pcs
+  liter
+}
+
+enum AnalysisStatus {
+  queued
+  processing
+  completed
+  failed
+  expired
+}
+
+enum NotificationType {
+  reminder
+  ai
+  alert
+  achievement
+  system
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  locale    String   @default("th")
+  role      String   @default("owner")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  plants       Plant[]
+  activities   Activity[]
+  notifications Notification[]
+  analyses     Analysis[]
+  insights     Insight[]
+}
+
+model Plant {
+  id             String          @id @default(cuid())
+  user           User            @relation(fields: [userId], references: [id])
+  userId         String
+  nickname       String
+  scientificName String?
+  status         PlantStatus     @default(healthy)
+  imageRef       String?
+  location       Json?
+  statusColor    String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  deletedAt      DateTime?
+
+  preferences    PlantPreference?
+  activities     Activity[]
+  analyses       Analysis[]
+  notifications  Notification[]
+}
+
+model PlantPreference {
+  id             String   @id @default(cuid())
+  plant          Plant    @relation(fields: [plantId], references: [id])
+  plantId        String   @unique
+  lastKind       ActivityKind?
+  lastUnit       Unit?
+  lastQty        String?
+  lastN          String?
+  lastP          String?
+  lastK          String?
+  reminderWater  Int?
+  reminderFertil Int?
+  enableReminders Boolean @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  history        PlantPreferenceHistory[]
+}
+
+model PlantPreferenceHistory {
+  id        String         @id @default(cuid())
+  plantPref PlantPreference @relation(fields: [plantPreferenceId], references: [id])
+  plantPreferenceId String
+  lastKind  ActivityKind?
+  lastUnit  Unit?
+  lastQty   String?
+  lastN     String?
+  lastP     String?
+  lastK     String?
+  reminderWater  Int?
+  reminderFertil Int?
+  enableReminders Boolean
+  recordedAt DateTime @default(now())
+}
+
+model Activity {
+  id        String       @id @default(cuid())
+  plant     Plant        @relation(fields: [plantId], references: [id])
+  plantId   String
+  user      User         @relation(fields: [userId], references: [id])
+  userId    String
+  kind      ActivityKind
+  quantity  String?
+  unit      Unit?
+  npk       Json?
+  note      String?
+  dateISO   DateTime @default(now())
+  time24    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+}
+
+model Analysis {
+  id              String           @id @default(cuid())
+  plant           Plant?           @relation(fields: [plantId], references: [id])
+  plantId         String?
+  user            User             @relation(fields: [userId], references: [id])
+  userId          String
+  status          AnalysisStatus   @default(queued)
+  imageRef        String?
+  plantName       String?
+  score           Float?
+  issues          Json?
+  recommendations Json?
+  weatherSnapshot Json?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  user      User             @relation(fields: [userId], references: [id])
+  userId    String
+  plant     Plant?           @relation(fields: [plantId], references: [id])
+  plantId   String?
+  type      NotificationType
+  title     String
+  detail    String?
+  timeLabel String
+  read      Boolean          @default(false)
+  payload   Json?
+  expiresAt DateTime?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+}
+
+model Insight {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  metric    String
+  timeframe String
+  value     Float
+  trend     Float?
+  confidence Float?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PreferenceAudit {
+  id        String   @id @default(cuid())
+  plantId   String
+  payload   Json
+  createdAt DateTime @default(now())
+}

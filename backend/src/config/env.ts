@@ -13,6 +13,7 @@ const schema = z.object({
   POSTGRES_DB: z.string(),
   POSTGRES_USER: z.string(),
   POSTGRES_PASSWORD: z.string(),
+  DATABASE_URL: z.string().url(),
   REDIS_HOST: z.string(),
   REDIS_PORT: z.coerce.number().default(6379),
   ANALYSIS_API_BASE_URL: z.string().url().default('http://analysis-api:5000'),

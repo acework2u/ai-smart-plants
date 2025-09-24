@@ -1,7 +1,8 @@
 import pino from 'pino';
+import type { LoggerOptions } from 'pino';
 import { env } from '@config/env';
 
-const options: pino.LoggerOptions = {
+const options: LoggerOptions = {
   name: env.APP_NAME,
   level: env.LOG_LEVEL
 };

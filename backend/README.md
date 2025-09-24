@@ -14,6 +14,7 @@ This directory contains the initial backend scaffold that aligns with `.project/
 cd backend
 cp .env.example .env.local
 npm install   # install dependencies (requires internet access)
+npm run prisma:generate
 npm run dev
 ```
 This runs the API with hot reload on port `4000` (see `src/server.ts`).
@@ -28,6 +29,8 @@ This launches:
 - `postgres` (Port 5432)
 - `redis` (Port 6379)
 - `analysis-api` (FastAPI mock analysis service on port 5000)
+
+Run `npm run prisma:migrate` locally before starting the app to apply database schema changes.
 
 Volumes persist database/cache data between runs.
 
@@ -48,11 +51,10 @@ backend/
 ```
 
 ## Next Steps
-1. Flesh out routes/controllers according to API spec sections (users, plants, activities, analyses, etc.).
+1. Complete additional domain modules (Activities, Analyses, Notifications, Insights).
 2. Replace placeholder OpenAPI document with generated spec (e.g., using `nestjs/swagger` or `express-oas-generator`).
 3. Implement shared middleware for authentication (JWT verification with JWKS), idempotency, and error handling per spec.
-4. Configure Prisma/TypeORM (or alternate service) for Postgres schema management.
-5. Add tests (`vitest`) and CI pipeline for linting, testing, and contract validation.
+4. Add tests (`vitest`) and CI pipeline for linting, testing, and contract validation.
 
 ## Deployment
 - Build production image via `npm run build` then `docker build -f Dockerfile -t smart-plant-api .`.
