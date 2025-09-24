@@ -1,0 +1,61 @@
+version: '3.9'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: smart-plant-api
+    command: npm run dev
+    ports:
+      - "4000:4000"
+    env_file:
+      - .env.local
+    volumes:
+      - ./:/usr/src/app
+      - /usr/src/app/node_modules
+    depends_on:
+      - postgres
+      - redis
+      - analysis-api
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: smart-plant-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: smartplants
+      POSTGRES_USER: smartplants
+      POSTGRES_PASSWORD: smartplants
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    container_name: smart-plant-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  analysis-api:
+    build:
+      context: ../analysis-service
+      dockerfile: Dockerfile
+    container_name: smart-plant-analysis
+    command: uvicorn app.main:app --host 0.0.0.0 --port 5000 --reload
+    ports:
+      - "5001:5000"
+    env_file:
+      - ../analysis-service/.env.local
+    volumes:
+      - ../analysis-service:/usr/src/app
+    depends_on:
+      - redis
+
+volumes:
+  postgres_data:
+  redis_data:
