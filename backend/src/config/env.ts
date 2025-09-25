@@ -19,7 +19,12 @@ const schema = z.object({
   ANALYSIS_API_BASE_URL: z.string().url().default('http://analysis-api:5000'),
   JWT_JWKS_URI: z.string().url(),
   JWT_AUDIENCE: z.string().url(),
-  JWT_ISSUER: z.string().url()
+  JWT_ISSUER: z.string().url(),
+  AUTH_JWKS_URI: z.string().url(),
+  AUTH_AUDIENCE: z.string(),
+  AUTH_ISSUER: z.string(),
+  AUTH_TOKEN_SECRET: z.string().min(16),
+  AUTH_ACCESS_TOKEN_TTL: z.coerce.number().int().positive().default(3600)
 });
 
 const parsed = schema.safeParse(process.env);

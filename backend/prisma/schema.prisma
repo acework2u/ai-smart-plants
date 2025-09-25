@@ -48,6 +48,8 @@ enum NotificationType {
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
+  passwordHash String?
+  authProvider String  @default("password")
   locale    String   @default("th")
   role      String   @default("owner")
   createdAt DateTime @default(now())
@@ -58,6 +60,7 @@ model User {
   notifications Notification[]
   analyses     Analysis[]
   insights     Insight[]
+  notificationSubscriptions NotificationSubscription[]
 }
 
 model Plant {
@@ -165,6 +168,20 @@ model Notification {
   expiresAt DateTime?
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
+}
+
+model NotificationSubscription {
+  id         String   @id @default(cuid())
+  user       User     @relation(fields: [userId], references: [id])
+  userId     String
+  deviceId   String
+  pushToken  String
+  platform   String   @default("expo")
+  locale     String?  @default("th")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([userId, deviceId])
 }
 
 model Insight {

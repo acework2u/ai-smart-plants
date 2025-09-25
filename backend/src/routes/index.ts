@@ -1,6 +1,11 @@
 import { Router } from 'express';
 
 import { apiSpecRouter } from './spec';
+import { activitiesRouter } from '@modules/activities/activities.controller';
+import { analysesRouter } from '@modules/analyses/analyses.controller';
+import { notificationsRouter } from '@modules/notifications/notifications.controller';
+import { insightsRouter } from '@modules/insights/insights.controller';
+import { authRouter } from '@modules/auth/auth.controller';
 import { plantsRouter } from '@modules/plants/plants.controller';
 import { versionMiddleware, getVersionInfo, getAllVersionsInfo } from '../middleware/versionMiddleware';
 
@@ -14,6 +19,11 @@ router.get('/versions', getAllVersionsInfo);
 router.get('/versions/:version', getVersionInfo);
 
 router.use('/docs', apiSpecRouter);
+router.use('/auth', authRouter);
+router.use('/analyses', analysesRouter);
+router.use('/notifications', notificationsRouter);
+router.use('/insights', insightsRouter);
+router.use('/plants/:plantId/activities', activitiesRouter);
 router.use('/plants', plantsRouter);
 
 router.get('/', (req, res) => {

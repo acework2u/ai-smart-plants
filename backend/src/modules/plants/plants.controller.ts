@@ -1,4 +1,4 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router } from 'express';
 import { z } from 'zod';
 
 import {
@@ -18,28 +18,24 @@ import {
 } from './plants.service';
 import { success } from '@utils/response';
 import { HttpError } from '@middleware/errorHandler';
+import { requireAuth } from '@middleware/auth';
 
 const router = Router();
 
-// TODO: replace with real auth middleware once implemented
-const RequireUser = (req: Request, _res: Response, next: NextFunction) => {
-  const userId = req.headers['x-user-id'] as string | undefined;
-  if (!userId) {
-    return next(
-      new HttpError(401, {
-        code: 'auth/not-authenticated',
-        message: 'Missing user context. Provide X-User-Id header for now.'
-      })
-    );
-  }
-  req.user = { id: userId };
-  next();
-};
+router.use(requireAuth());
 
-router.use(RequireUser);
+const ensureScope = (req: { user?: { scopes?: string[] } }, scope: string) => {
+  if (!req.user?.scopes?.includes(scope)) {
+    throw new HttpError(403, {
+      code: 'auth/insufficient-scope',
+      message: `ต้องการ scope ${scope}`
+    });
+  }
+};
 
 router.get('/', async (req, res, next) => {
   try {
+    ensureScope(req, 'plants.read');
     const query = getPlantsQuerySchema.parse(req.query);
     const userId = (req.user as { id: string }).id;
 
@@ -66,6 +62,7 @@ router.get('/', async (req, res, next) => {
 
 router.post('/', async (req, res, next) => {
   try {
+    ensureScope(req, 'plants.write');
     const body = createPlantSchema.parse(req.body);
     const userId = (req.user as { id: string }).id;
     const result = await createPlant({ ...body, userId });
@@ -91,6 +88,7 @@ router.post('/', async (req, res, next) => {
 
 router.get('/:id', async (req, res, next) => {
   try {
+    ensureScope(req, 'plants.read');
     const userId = (req.user as { id: string }).id;
     const plant = await getPlant(req.params.id, userId);
     res.json(
@@ -106,6 +104,7 @@ router.get('/:id', async (req, res, next) => {
 
 router.patch('/:id', async (req, res, next) => {
   try {
+    ensureScope(req, 'plants.write');
     const body = updatePlantSchema.parse(req.body);
     const userId = (req.user as { id: string }).id;
     const plant = await updatePlant(req.params.id, userId, body);
@@ -131,6 +130,7 @@ router.patch('/:id', async (req, res, next) => {
 
 router.delete('/:id', async (req, res, next) => {
   try {
+    ensureScope(req, 'plants.write');
     const userId = (req.user as { id: string }).id;
     await softDeletePlant(req.params.id, userId);
     res.status(204).send();
@@ -141,6 +141,7 @@ router.delete('/:id', async (req, res, next) => {
 
 router.put('/:id/preferences', async (req, res, next) => {
   try {
+    ensureScope(req, 'plants.write');
     const body = upsertPreferenceSchema.parse(req.body);
     const userId = (req.user as { id: string }).id;
     const prefs = await upsertPreferences(req.params.id, userId, body);
@@ -166,6 +167,7 @@ router.put('/:id/preferences', async (req, res, next) => {
 
 router.get('/:id/preferences/history', async (req, res, next) => {
   try {
+    ensureScope(req, 'plants.read');
     const userId = (req.user as { id: string }).id;
     const history = await getPreferenceHistory(req.params.id, userId);
     res.json(
