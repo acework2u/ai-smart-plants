@@ -24,6 +24,8 @@ npm run dev
 # Login
 # curl -X POST http://localhost:4000/v1/auth/login -H 'Content-Type: application/json' \\
 #   -d '{"email":"demo@example.com","password":"Password123"}'
+# Seed database (requires DATABASE_URL)
+# DATABASE_URL="postgresql://smartplants:smartplants@postgres:5432/smartplants" npm run prisma:seed
 ```
 This runs the API with hot reload on port `4000` (see `src/server.ts`).
 
@@ -38,7 +40,7 @@ This launches:
 - `redis` (Port 6379)
 - `analysis-api` (FastAPI mock analysis service on port 5000)
 
-Run `npm run prisma:migrate` locally before starting the app to apply database schema changes.
+Run `npm run prisma:migrate` locally before starting the app to apply database schema changes. After that, run `npm run prisma:seed` to populate a demo account (email/password shown above).
 Generate a JWT from your identity provider (matching `AUTH_ISSUER` / `AUTH_AUDIENCE`) and send it via `Authorization: Bearer <token>` when calling endpoints.
 For local development only, you may continue using the legacy header `X-User-Id` (a seeded user id). The middleware will grant full scopes automatically when `NODE_ENV=development`. Alternatively, use the `/auth/register` + `/auth/login` endpoints above to mint HS256 JWTs with the configured `AUTH_TOKEN_SECRET`.
 
