@@ -22,6 +22,7 @@ import {
   ActivityIndicator,
   Animated,
   Image,
+  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -29,7 +30,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Chip } from '../../components/atoms';
 import { OptimizedFlatList } from '../../components/atoms/OptimizedFlatList';
 import { PlantCardSkeleton, Skeleton } from '../../components/atoms/Skeleton';
@@ -312,7 +312,7 @@ export default function GardenScreen() {
     if (hour < 12) return t('greeting.morning');
     if (hour < 18) return t('greeting.afternoon');
     return hour < 22 ? t('greeting.evening') : t('greeting.night');
-  }, [t]);
+  }, []);
 
   const getQuickAction = useCallback(() => {
     if (heroStats.critical > 0) return { title: 'ช่วยด่วน!', subtitle: `${heroStats.critical} ต้นต้องการความช่วยเหลือ`, action: 'critical' };
@@ -473,7 +473,7 @@ export default function GardenScreen() {
         />
       </View>
     </View>
-  ), [handleAddPlant, theme.colors.text.disabled, theme.colors.text.primary, theme.colors.text.secondary, t]);
+  ), [handleAddPlant, theme.colors.text.disabled, theme.colors.text.primary, theme.colors.text.secondary]);
 
   const renderSearchSkeleton = useCallback(() => (
     <View style={styles.skeletonContainer}>
@@ -899,12 +899,7 @@ export default function GardenScreen() {
     // Enhanced hero deps
     gardenHealth,
     getGreeting,
-    getQuickAction,
-    // Animation deps
-    fadeAnim,
-    pulseAnim,
-    // Translation deps
-    t
+    getQuickAction
   ]);
 
   if (isLoading) {

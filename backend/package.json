@@ -2,6 +2,7 @@
   "name": "smart-plant-backend",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "description": "Smart Plant AI backend service aligning with API_SPEC_Development.md",
   "main": "dist/server.js",
   "scripts": {

@@ -38,6 +38,6 @@ module.exports = {
   },
   testEnvironment: 'node',
   transformIgnorePatterns: [
-    'node_modules/(?!(react-native|@react-native|expo|@expo|react-native-reanimated|react-native-gesture-handler|react-native-safe-area-context|react-native-screens|@react-navigation|react-native-svg|react-native-skeleton-placeholder)/)',
+    'node_modules/(?!(react-native|@react-native|expo|@expo|expo-modules-core|expo-auth-session|expo-apple-authentication|expo-local-authentication|expo-secure-store|expo-crypto|expo-web-browser|expo-file-system|react-native-reanimated|react-native-gesture-handler|react-native-safe-area-context|react-native-screens|@react-navigation|react-native-svg|react-native-skeleton-placeholder|react-native-fbsdk-next)/)',
   ],
 };

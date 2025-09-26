@@ -21,7 +21,7 @@ export default function ProgressDots({
   total,
   current,
   activeColor = lightColors.primary,
-  inactiveColor = lightColors.gray[300],
+  inactiveColor = lightColors.gray300,
   size = 8,
   spacing: dotSpacing = 8,
 }: ProgressDotsProps) {

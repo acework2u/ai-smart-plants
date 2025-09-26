@@ -8,8 +8,6 @@ WebBrowser.maybeCompleteAuthSession();
 export class GoogleOAuthProvider {
   private static instance: GoogleOAuthProvider;
   private discovery: AuthSession.AuthRequest.DiscoveryDocument | null = null;
-  private request: AuthSession.AuthRequest | null = null;
-  private promptAsync: ((options?: AuthSession.AuthRequestPromptOptions) => Promise<AuthSession.AuthSessionResult>) | null = null;
 
   private readonly config: OAuthProvider = {
     id: 'google',
@@ -48,15 +46,28 @@ export class GoogleOAuthProvider {
         userInfoEndpoint: 'https://www.googleapis.com/oauth2/v2/userinfo',
       };
 
-      // Generate code verifier for PKCE
+    } catch (error) {
+      console.error('Failed to initialize Google OAuth provider:', error);
+      throw this.createAuthError('INIT_FAILED', 'Failed to initialize Google OAuth provider');
+    }
+  }
+
+  public async signIn(): Promise<AppAuthSession> {
+    try {
+      if (!this.discovery) {
+        throw this.createAuthError('NOT_INITIALIZED', 'Google OAuth provider not initialized');
+      }
+
+      // Generate code verifier and challenge for PKCE
+      const codeVerifier = this.generateCodeVerifier();
       const codeChallenge = await Crypto.digestStringAsync(
         Crypto.CryptoDigestAlgorithm.SHA256,
-        this.generateCodeVerifier(),
+        codeVerifier,
         { encoding: Crypto.CryptoEncoding.BASE64URL }
       );
 
       // Create auth request
-      this.request = new AuthSession.AuthRequest({
+      const request = new AuthSession.AuthRequest({
         clientId: this.config.config.clientId,
         scopes: this.config.config.scopes,
         redirectUri: this.config.config.redirectUri,
@@ -69,40 +80,12 @@ export class GoogleOAuthProvider {
         },
       });
 
-      // Set up prompt async function
-      [this.request, , this.promptAsync] = AuthSession.useAuthRequest(
-        {
-          clientId: this.config.config.clientId,
-          scopes: this.config.config.scopes,
-          redirectUri: this.config.config.redirectUri,
-          responseType: AuthSession.ResponseType.Code,
-          codeChallenge,
-          codeChallengeMethod: AuthSession.CodeChallengeMethod.S256,
-          additionalParameters: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-        },
-        this.discovery
-      );
-    } catch (error) {
-      console.error('Failed to initialize Google OAuth provider:', error);
-      throw this.createAuthError('INIT_FAILED', 'Failed to initialize Google OAuth provider');
-    }
-  }
-
-  public async signIn(): Promise<AppAuthSession> {
-    try {
-      if (!this.promptAsync || !this.request) {
-        throw this.createAuthError('NOT_INITIALIZED', 'Google OAuth provider not initialized');
-      }
-
       // Start OAuth flow
-      const result = await this.promptAsync();
+      const result = await request.promptAsync(this.discovery);
 
       if (result.type === 'success') {
         // Exchange code for tokens
-        const tokens = await this.exchangeCodeForTokens(result.params.code);
+        const tokens = await this.exchangeCodeForTokens(result.params.code, codeVerifier);
 
         // Get user profile
         const userProfile = await this.getUserProfile(tokens.accessToken);
@@ -190,7 +173,7 @@ export class GoogleOAuthProvider {
     }
   }
 
-  private async exchangeCodeForTokens(code: string): Promise<AuthTokens> {
+  private async exchangeCodeForTokens(code: string, codeVerifier: string): Promise<AuthTokens> {
     const response = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: {
@@ -201,6 +184,7 @@ export class GoogleOAuthProvider {
         code,
         grant_type: 'authorization_code',
         redirect_uri: this.config.config.redirectUri,
+        code_verifier: codeVerifier,
       }),
     });
 
@@ -270,14 +254,12 @@ export class GoogleOAuthProvider {
   }
 
   private generateCodeVerifier(): string {
-    const array = new Uint8Array(32);
-    crypto.getRandomValues(array);
-    return Array.from(array, dec => ('0' + dec.toString(16)).substr(-2)).join('');
+    return Crypto.randomUUID().replace(/-/g, '') + Crypto.randomUUID().replace(/-/g, '');
   }
 
   private async getDeviceId(): Promise<string> {
     // In a real app, you might use expo-device or expo-application
-    return `device_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `device_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
   }
 
   private createAuthError(code: string, message: string, details?: any): AuthError {

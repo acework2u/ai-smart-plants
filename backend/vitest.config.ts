@@ -7,5 +7,8 @@ export default defineConfig({
     include: ['tests/**/*.test.ts'],
     setupFiles: [],
     reporters: 'default'
+  },
+  esbuild: {
+    target: 'node16'
   }
 });

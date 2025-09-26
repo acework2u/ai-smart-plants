@@ -79,10 +79,10 @@ export default function SimpleOnboardingScreen() {
     try {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       await AsyncStorage.setItem(STORAGE_KEYS.ONBOARDING_SEEN, 'true');
-      router.replace('/');
+      router.replace('/(tabs)');
     } catch (error) {
       console.error('Failed to save onboarding state:', error);
-      router.replace('/');
+      router.replace('/(tabs)');
     }
   };
 

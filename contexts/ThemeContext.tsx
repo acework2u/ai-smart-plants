@@ -81,7 +81,13 @@ const lightTheme: Theme = {
     primary: '#16a34a',
     primarySoft: '#dcfce7',
 
-    background: '#ffffff',
+    background: {
+      primary: '#ffffff',
+      secondary: '#f9fafb',
+      tertiary: '#f3f4f6',
+      overlay: 'rgba(0, 0, 0, 0.5)',
+      overlayLight: 'rgba(0, 0, 0, 0.3)',
+    },
     card: '#ffffff',
 
     surface: {
@@ -125,14 +131,6 @@ const lightTheme: Theme = {
 
     ripple: 'rgba(22, 163, 74, 0.1)',
     overlay: 'rgba(0, 0, 0, 0.5)',
-
-    background: {
-      primary: '#ffffff',
-      secondary: '#f9fafb',
-      tertiary: '#f3f4f6',
-      overlay: 'rgba(0, 0, 0, 0.5)',
-      overlayLight: 'rgba(0, 0, 0, 0.3)',
-    },
   },
   isDark: false,
   spacing,
@@ -143,7 +141,13 @@ const darkTheme: Theme = {
     primary: '#22c55e',
     primarySoft: '#14532d',
 
-    background: '#0f1419',
+    background: {
+      primary: '#0f1419',
+      secondary: '#1f2937',
+      tertiary: '#374151',
+      overlay: 'rgba(0, 0, 0, 0.7)',
+      overlayLight: 'rgba(0, 0, 0, 0.5)',
+    },
     card: '#374151',
 
     surface: {
@@ -187,14 +191,6 @@ const darkTheme: Theme = {
 
     ripple: 'rgba(34, 197, 94, 0.1)',
     overlay: 'rgba(0, 0, 0, 0.7)',
-
-    background: {
-      primary: '#0f1419',
-      secondary: '#1f2937',
-      tertiary: '#374151',
-      overlay: 'rgba(0, 0, 0, 0.7)',
-      overlayLight: 'rgba(0, 0, 0, 0.5)',
-    },
   },
   isDark: true,
   spacing,

@@ -1,54 +1,35 @@
 import { Tabs } from 'expo-router';
 import { BarChart3, Home, Leaf, Settings } from 'lucide-react-native';
-import React, { useCallback, useMemo } from 'react';
+import React from 'react';
 import { Platform } from 'react-native';
-import { hapticService } from '../../core/haptics';
-import { colors, getSpacing } from '../../core/theme';
-import { useTranslation } from '../../contexts/I18nContext';
 
-function TabLayoutInner() {
-  const { t } = useTranslation();
-
-  const handleTabPress = useCallback(() => {
-    hapticService.tabSwitch();
-  }, []);
-
-  const screenOptions = useMemo(() => ({
-    tabBarActiveTintColor: colors.primary,
-    tabBarInactiveTintColor: colors.text.tertiary,
-    tabBarStyle: {
-      backgroundColor: colors.white,
-      borderTopColor: colors.border.light,
-      borderTopWidth: 1,
-      paddingTop: getSpacing(2),
-      paddingBottom: Platform.OS === 'ios' ? getSpacing(6) : getSpacing(3),
-      height: Platform.OS === 'ios' ? 90 : 70,
-    },
-    tabBarLabelStyle: {
-      fontSize: 12,
-      fontWeight: '500' as const,
-      marginTop: getSpacing(1),
-    },
-    headerShown: false,
-  }), []);
-
-  const labels = useMemo(
-    () => ({
-      home: t('tabs.home'),
-      garden: t('tabs.garden'),
-      insights: t('tabs.insights'),
-      settings: t('tabs.settings'),
-    }),
-    [t]
-  );
-
+export default function TabLayout() {
   return (
-    <Tabs screenOptions={screenOptions} screenListeners={{ tabPress: handleTabPress }}>
+    <Tabs
+      screenOptions={{
+        tabBarActiveTintColor: '#16a34a',
+        tabBarInactiveTintColor: '#6b7280',
+        tabBarStyle: {
+          backgroundColor: '#ffffff',
+          borderTopColor: '#e5e7eb',
+          borderTopWidth: 1,
+          paddingTop: 8,
+          paddingBottom: Platform.OS === 'ios' ? 24 : 12,
+          height: Platform.OS === 'ios' ? 90 : 70,
+        },
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: '500',
+          marginTop: 4,
+        },
+        headerShown: false,
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{
-          title: labels.home,
-          tabBarLabel: labels.home,
+          title: 'หน้าหลัก',
+          tabBarLabel: 'หน้าหลัก',
           tabBarIcon: ({ color, size }) => (
             <Home size={size} color={color} />
           ),
@@ -57,8 +38,8 @@ function TabLayoutInner() {
       <Tabs.Screen
         name="garden"
         options={{
-          title: labels.garden,
-          tabBarLabel: labels.garden,
+          title: 'สวน',
+          tabBarLabel: 'สวน',
           tabBarIcon: ({ color, size }) => (
             <Leaf size={size} color={color} />
           ),
@@ -67,8 +48,8 @@ function TabLayoutInner() {
       <Tabs.Screen
         name="insights"
         options={{
-          title: labels.insights,
-          tabBarLabel: labels.insights,
+          title: 'ข้อมูลเชิงลึก',
+          tabBarLabel: 'ข้อมูล',
           tabBarIcon: ({ color, size }) => (
             <BarChart3 size={size} color={color} />
           ),
@@ -77,8 +58,8 @@ function TabLayoutInner() {
       <Tabs.Screen
         name="settings"
         options={{
-          title: labels.settings,
-          tabBarLabel: labels.settings,
+          title: 'ตั้งค่า',
+          tabBarLabel: 'ตั้งค่า',
           tabBarIcon: ({ color, size }) => (
             <Settings size={size} color={color} />
           ),
@@ -87,5 +68,3 @@ function TabLayoutInner() {
     </Tabs>
   );
 }
-
-export default React.memo(TabLayoutInner);

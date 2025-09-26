@@ -105,8 +105,8 @@ export default function OnboardingCarousel({
       scrollX.value = next < 0 ? 0 : next > max ? max : next;
     })
     .onEnd((event) => {
-      // Wrap to avoid passing potentially undefined reference
-      runOnJS(() => decideTarget(event.translationX, event.velocityX))();
+      // Use runOnJS properly
+      runOnJS(decideTarget)(event.translationX, event.velocityX);
     });
 
   const animatedStyle = useAnimatedStyle(() => {
@@ -186,7 +186,7 @@ export default function OnboardingCarousel({
           total={slides.length}
           current={currentIndex}
           activeColor={lightColors.primary}
-          inactiveColor={lightColors.gray[300]}
+          inactiveColor={lightColors.gray300}
           size={10}
           spacing={12}
         />

@@ -24,6 +24,10 @@ import { Card } from '../../components/atoms/Card';
 import { useTheme, type Theme } from '../../contexts/ThemeContext';
 import { radius, typography } from '../../core/theme';
 import { useHaptic } from '../../core/haptics';
+import { GoogleOAuthProvider } from '../../services/auth/GoogleOAuthProvider';
+import { AppleOAuthProvider } from '../../services/auth/AppleOAuthProvider';
+import { FacebookOAuthProvider } from '../../services/auth/FacebookOAuthProvider';
+import { useAuthStore } from '../../stores/authStore';
 
 interface LoginForm {
   email: string;
@@ -36,6 +40,7 @@ const LoginScreen: React.FC = () => {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const hapticController = useHaptic();
+  const { signIn, setSession } = useAuthStore();
 
   const [form, setForm] = useState<LoginForm>({
     email: '',
@@ -45,7 +50,13 @@ const LoginScreen: React.FC = () => {
 
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isAppleAvailable, setIsAppleAvailable] = useState(false);
   const [errors, setErrors] = useState<Partial<LoginForm>>({});
+
+  // Check Apple Sign In availability
+  React.useEffect(() => {
+    AppleOAuthProvider.isAvailable().then(setIsAppleAvailable);
+  }, []);
 
   const validateForm = useCallback((): boolean => {
     const newErrors: Partial<LoginForm> = {};
@@ -104,11 +115,73 @@ const LoginScreen: React.FC = () => {
     }
   }, [form, validateForm, router, hapticController]);
 
-  const handleSocialLogin = useCallback((provider: 'google' | 'apple' | 'facebook') => {
-    hapticController.selection();
-    // TODO: Implement social login
-    console.log(`Social login with ${provider}`);
-  }, [hapticController]);
+  const handleSocialLogin = useCallback(async (provider: 'google' | 'apple' | 'facebook') => {
+    try {
+      hapticController.selection();
+      setIsLoading(true);
+
+      let session;
+
+      switch (provider) {
+        case 'google':
+          const googleProvider = GoogleOAuthProvider.getInstance();
+          if (!googleProvider.isEnabled) {
+            throw new Error('Google OAuth is not configured');
+          }
+          session = await googleProvider.signIn();
+          break;
+
+        case 'apple':
+          const appleProvider = AppleOAuthProvider.getInstance();
+          if (!appleProvider.isEnabled) {
+            throw new Error('Apple Sign In is not available on this device');
+          }
+          session = await appleProvider.signIn();
+          break;
+
+        case 'facebook':
+          const facebookProvider = FacebookOAuthProvider.getInstance();
+          if (!facebookProvider.isEnabled) {
+            throw new Error('Facebook OAuth is not configured');
+          }
+          session = await facebookProvider.signIn();
+          break;
+
+        default:
+          throw new Error('Unsupported login provider');
+      }
+
+      // Store session in auth store
+      setSession(session);
+
+      hapticController.success();
+      router.replace('/(tabs)/garden');
+
+    } catch (error: any) {
+      console.error(`${provider} login error:`, error);
+      hapticController.error();
+
+      let errorMessage = 'เข้าสู่ระบบไม่สำเร็จ';
+
+      if (error.code === 'USER_CANCELLED') {
+        return; // Don't show error for user cancellation
+      } else if (error.code === 'NOT_AVAILABLE') {
+        errorMessage = 'ฟีเจอร์นี้ไม่พร้อมใช้งานบนอุปกรณ์นี้';
+      } else if (error.code === 'NETWORK_ERROR') {
+        errorMessage = 'ไม่สามารถเชื่อมต่ออินเทอร์เน็ตได้';
+      } else if (error.message.includes('not configured')) {
+        errorMessage = 'การตั้งค่าการเข้าสู่ระบบยังไม่สมบูรณ์';
+      }
+
+      Alert.alert(
+        'เข้าสู่ระบบไม่สำเร็จ',
+        errorMessage,
+        [{ text: 'ตกลง', style: 'default' }]
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, [hapticController, router, setSession]);
 
   const togglePasswordVisibility = useCallback(() => {
     hapticController.selection();
@@ -229,27 +302,35 @@ const LoginScreen: React.FC = () => {
 
             <View style={styles.socialButtons}>
               <Pressable
-                style={styles.socialButton}
+                style={[styles.socialButton, isLoading && styles.socialButtonDisabled]}
                 onPress={() => handleSocialLogin('google')}
                 disabled={isLoading}
               >
-                <Text style={styles.socialButtonText}>🔍 Google</Text>
+                <Text style={[styles.socialButtonText, isLoading && styles.socialButtonTextDisabled]}>
+                  {isLoading ? '⏳ กำลังเข้าสู่ระบบ...' : '🔍 Google'}
+                </Text>
               </Pressable>
 
-              <Pressable
-                style={styles.socialButton}
-                onPress={() => handleSocialLogin('apple')}
-                disabled={isLoading}
-              >
-                <Text style={styles.socialButtonText}>🍎 Apple</Text>
-              </Pressable>
+              {isAppleAvailable && (
+                <Pressable
+                  style={[styles.socialButton, isLoading && styles.socialButtonDisabled]}
+                  onPress={() => handleSocialLogin('apple')}
+                  disabled={isLoading}
+                >
+                  <Text style={[styles.socialButtonText, isLoading && styles.socialButtonTextDisabled]}>
+                    {isLoading ? '⏳ กำลังเข้าสู่ระบบ...' : '🍎 Apple'}
+                  </Text>
+                </Pressable>
+              )}
 
               <Pressable
-                style={styles.socialButton}
+                style={[styles.socialButton, isLoading && styles.socialButtonDisabled]}
                 onPress={() => handleSocialLogin('facebook')}
                 disabled={isLoading}
               >
-                <Text style={styles.socialButtonText}>📘 Facebook</Text>
+                <Text style={[styles.socialButtonText, isLoading && styles.socialButtonTextDisabled]}>
+                  {isLoading ? '⏳ กำลังเข้าสู่ระบบ...' : '📘 Facebook'}
+                </Text>
               </Pressable>
             </View>
           </View>
@@ -418,6 +499,12 @@ const createStyles = (theme: Theme) =>
       fontSize: typography.fontSize.base,
       fontFamily: typography.fontFamily.medium,
       color: theme.colors.text.primary,
+    },
+    socialButtonDisabled: {
+      opacity: 0.6,
+    },
+    socialButtonTextDisabled: {
+      color: theme.colors.text.tertiary,
     },
     signUpContainer: {
       flexDirection: 'row',

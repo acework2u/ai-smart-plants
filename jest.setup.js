@@ -133,6 +133,11 @@ jest.mock('react-native/Libraries/Utilities/Appearance', () => ({
 // Global test setup
 global.__DEV__ = true;
 
+// Mock environment variables
+process.env.EXPO_PUBLIC_PLANTNET_API_KEY = 'mock-api-key';
+process.env.EXPO_PUBLIC_GOOGLE_VISION_API_KEY = 'mock-vision-api-key';
+process.env.EXPO_PUBLIC_OPENAI_API_KEY = 'mock-openai-api-key';
+
 // Silence console warnings in tests
 global.console = {
   ...console,
