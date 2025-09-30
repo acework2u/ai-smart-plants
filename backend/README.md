@@ -27,6 +27,7 @@ npm run dev
 # Seed database (requires DATABASE_URL)
 # DATABASE_URL="postgresql://smartplants:smartplants@postgres:5432/smartplants" npm run prisma:seed
 ```
+The `.env.example` template captures all variables required by `src/config/env.ts`, including `RATE_LIMIT_GENERAL_LIMIT` and `RATE_LIMIT_GENERAL_WINDOW_MS`. Copy it for each environment and adjust throughput limits without code changes.
 This runs the API with hot reload on port `4000` (see `src/server.ts`).
 
 ### With Docker Compose

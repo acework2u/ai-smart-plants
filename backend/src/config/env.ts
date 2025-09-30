@@ -24,7 +24,9 @@ const schema = z.object({
   AUTH_AUDIENCE: z.string(),
   AUTH_ISSUER: z.string(),
   AUTH_TOKEN_SECRET: z.string().min(16),
-  AUTH_ACCESS_TOKEN_TTL: z.coerce.number().int().positive().default(3600)
+  AUTH_ACCESS_TOKEN_TTL: z.coerce.number().int().positive().default(3600),
+  RATE_LIMIT_GENERAL_LIMIT: z.coerce.number().int().positive().default(120),
+  RATE_LIMIT_GENERAL_WINDOW_MS: z.coerce.number().int().positive().default(60_000)
 });
 
 const parsed = schema.safeParse(process.env);

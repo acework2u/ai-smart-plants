@@ -34,7 +34,9 @@ vi.mock('../../src/config/prisma', () => ({
 
 vi.mock('../../src/config/env', () => ({
   env: {
-    ANALYSIS_API_BASE_URL: 'http://analysis-api:5000'
+    ANALYSIS_API_BASE_URL: 'http://analysis-api:5000',
+    RATE_LIMIT_GENERAL_LIMIT: 120,
+    RATE_LIMIT_GENERAL_WINDOW_MS: 60000
   }
 }));
 

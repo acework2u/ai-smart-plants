@@ -65,7 +65,9 @@ vi.mock('../../src/config/env', () => ({
     ANALYSIS_API_BASE_URL: 'http://analysis-api:5000',
     JWT_JWKS_URI: '',
     JWT_AUDIENCE: 'https://api.smartplants.app',
-    JWT_ISSUER: 'https://issuer'
+    JWT_ISSUER: 'https://issuer',
+    RATE_LIMIT_GENERAL_LIMIT: 120,
+    RATE_LIMIT_GENERAL_WINDOW_MS: 60000
   }
 }));
 

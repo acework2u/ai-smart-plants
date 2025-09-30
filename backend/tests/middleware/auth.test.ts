@@ -31,7 +31,9 @@ vi.mock('../../src/config/env', () => ({
     JWT_AUDIENCE: 'https://api.smartplants.app',
     JWT_ISSUER: 'https://issuer',
     AUTH_TOKEN_SECRET: 'test-secret-123456789',
-    AUTH_ACCESS_TOKEN_TTL: 3600
+    AUTH_ACCESS_TOKEN_TTL: 3600,
+    RATE_LIMIT_GENERAL_LIMIT: 120,
+    RATE_LIMIT_GENERAL_WINDOW_MS: 60000
   }
 }));
 
