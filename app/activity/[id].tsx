@@ -34,7 +34,7 @@ import { getSpacing, radius } from '@/core/theme';
 import { typography } from '@/core/theme';
 import { Card } from '@/components/atoms/Card';
 import { Button } from '@/components/atoms/Button';
-import { useHaptic } from '@/hooks/useHaptic';
+import { useHaptic } from '@/core/haptics';
 
 const EMPTY_NPK: NPK = { n: '', p: '', k: '' };
 
