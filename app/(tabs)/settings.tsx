@@ -1,20 +1,8 @@
-import React, { useCallback, useMemo, useState } from 'react';
-import {
-  Animated,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import {
   Bell,
+  ChevronRight,
   Clock,
   CloudDownload,
   Database,
@@ -29,17 +17,29 @@ import {
   SlidersHorizontal,
   ThermometerSun,
   Vibrate,
-  ChevronRight,
   X,
 } from 'lucide-react-native';
+import React, { useCallback, useMemo, useState } from 'react';
+import {
+  Animated,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '../../components/atoms/Card';
-import { useTheme, type Theme } from '../../contexts/ThemeContext';
-import { radius, typography } from '../../core/theme';
-import { usePreferencesStore } from '../../stores/preferences';
-import { useNotificationStore } from '../../stores/notificationStore';
-import { useUser } from '../../stores/userStore';
-import { useHaptic } from '../../core/haptics';
 import { useTranslation } from '../../contexts/I18nContext';
+import { useTheme, type Theme } from '../../contexts/ThemeContext';
+import { useHaptic } from '../../core/haptics';
+import { radius, typography } from '../../core/theme';
+import { useNotificationStore } from '../../stores/notificationStore';
+import { usePreferencesStore } from '../../stores/preferences';
+import { useUser } from '../../stores/userStore';
 
 type ThemeOption = 'light' | 'dark' | 'system';
 type LanguageOption = 'th' | 'en';
@@ -608,7 +608,7 @@ export default function SettingsScreen() {
           key: 'theme',
           icon: Palette,
           title: t('settings.sections.general.items.theme.title'),
-          subtitle: t('settings.sections.general.items.theme.subtitle'),
+          // subtitle: t('settings.sections.general.items.theme.subtitle'),
           accessory: (
             <OptionGroup<ThemeOption>
               value={themePreference}
@@ -621,7 +621,7 @@ export default function SettingsScreen() {
           key: 'language',
           icon: Languages,
           title: t('settings.sections.general.items.language.title'),
-          subtitle: t('settings.sections.general.items.language.subtitle'),
+          // subtitle: t('settings.sections.general.items.language.subtitle'),
           accessory: (
             <OptionGroup<LanguageOption>
               value={currentLanguage}
@@ -634,7 +634,7 @@ export default function SettingsScreen() {
           key: 'haptics',
           icon: Vibrate,
           title: t('settings.sections.general.items.haptics.title'),
-          subtitle: t('settings.sections.general.items.haptics.subtitle'),
+          // subtitle: t('settings.sections.general.items.haptics.subtitle'),
           accessory: (
             <Switch
               value={hapticsEnabled}
@@ -655,7 +655,7 @@ export default function SettingsScreen() {
           key: 'water',
           icon: Droplet,
           title: t('settings.sections.measurement.items.water.title'),
-          subtitle: t('settings.sections.measurement.items.water.subtitle'),
+          // subtitle: t('settings.sections.measurement.items.water.subtitle'),
          accessory: (
            <OptionGroup<VolumeUnit>
              value={units.volume}
@@ -668,7 +668,7 @@ export default function SettingsScreen() {
           key: 'fertilizer',
           icon: Scale,
           title: t('settings.sections.measurement.items.fertilizer.title'),
-          subtitle: t('settings.sections.measurement.items.fertilizer.subtitle'),
+          // subtitle: t('settings.sections.measurement.items.fertilizer.subtitle'),
           accessory: (
             <OptionGroup<WeightUnit>
               value={units.weight}
@@ -681,7 +681,7 @@ export default function SettingsScreen() {
           key: 'temperature',
           icon: ThermometerSun,
           title: t('settings.sections.measurement.items.temperature.title'),
-          subtitle: t('settings.sections.measurement.items.temperature.subtitle'),
+          // subtitle: t('settings.sections.measurement.items.temperature.subtitle'),
           accessory: (
             <OptionGroup<TemperatureUnit>
               value={units.temperature}
@@ -701,7 +701,7 @@ export default function SettingsScreen() {
           key: 'master',
           icon: Bell,
           title: t('settings.sections.notifications.items.master.title'),
-          subtitle: t('settings.sections.notifications.items.master.subtitle'),
+          // subtitle: t('settings.sections.notifications.items.master.subtitle'),
           accessory: (
             <Switch
               value={globalNotificationPreferences.enabled}
@@ -715,7 +715,7 @@ export default function SettingsScreen() {
           key: 'quietHours',
           icon: MoonStar,
           title: t('settings.sections.notifications.items.quietHours.title'),
-          subtitle: `${t('settings.sections.notifications.items.quietHours.subtitlePrefix')}${quietHoursLabel}`,
+          // subtitle: `${t('settings.sections.notifications.items.quietHours.subtitlePrefix')}${quietHoursLabel}`,
           accessory: (
             <Switch
               value={globalNotificationPreferences.timing.quietHours.enabled}
@@ -728,17 +728,10 @@ export default function SettingsScreen() {
           disabled: !globalNotificationPreferences.enabled,
         },
         {
-          key: 'preferredTime',
-          icon: Clock,
-          title: t('settings.sections.notifications.items.preferredTime.title'),
-          subtitle: t('settings.sections.notifications.items.preferredTime.subtitle'),
-          disabled: !globalNotificationPreferences.enabled,
-        },
-        {
           key: 'sound',
           icon: SlidersHorizontal,
           title: t('settings.sections.notifications.items.sound.title'),
-          subtitle: t('settings.sections.notifications.items.sound.subtitle'),
+          // subtitle: t('settings.sections.notifications.items.sound.subtitle'),
           accessory: (
             <Switch
               value={globalNotificationPreferences.delivery.sound}
@@ -754,7 +747,7 @@ export default function SettingsScreen() {
           key: 'vibration',
           icon: Vibrate,
           title: t('settings.sections.notifications.items.vibration.title'),
-          subtitle: t('settings.sections.notifications.items.vibration.subtitle'),
+          // subtitle: t('settings.sections.notifications.items.vibration.subtitle'),
           accessory: (
             <Switch
               value={globalNotificationPreferences.delivery.vibration}
@@ -807,7 +800,7 @@ export default function SettingsScreen() {
           key: 'personalised',
           icon: Globe2,
           title: t('settings.sections.privacy.items.personalised.title'),
-          subtitle: t('settings.sections.privacy.items.personalised.subtitle'),
+          // subtitle: t('settings.sections.privacy.items.personalised.subtitle'),
           accessory: (
             <Switch
               value={privacy.personalizedTips}
@@ -934,9 +927,14 @@ export default function SettingsScreen() {
             </View>
           </LinearGradient>
 
+          <View className="flex-1 bg-blue-500 p-4">
+              <Text className="text-white text-xl font-bold">Hello!</Text>
+          </View>
           {sections.map((section) => (
             <SettingsSection key={section.key} section={section} />
           ))}
+
+
         </View>
       </ScrollView>
 
