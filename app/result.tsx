@@ -167,17 +167,12 @@ export default function ResultScreen() {
         name: analysisResult.plantName,
         scientificName: analysisResult.scientificName || '',
         status: analysisResult.healthStatus,
-        imageUri: analysisResult.imageUri,
-        lastWatered: null,
-        lastFertilized: null,
-        notes: analysisResult.notes || '',
-        careInstructions: analysisResult.recommendations
-          .filter(rec => rec.category === 'watering' || rec.category === 'fertilizing')
-          .map(rec => rec.description)
-          .join('\n'),
-        healthScore: analysisResult.healthScore,
-        analysisHistory: [analysisResult],
-        tags: analysisResult.tags || [],
+        imageUrl: analysisResult.imageUri,
+        metadata: {
+          healthScore: analysisResult.healthScore,
+          analysisHistory: [analysisResult],
+          tags: analysisResult.tags || [],
+        },
       };
 
       // Add to garden store

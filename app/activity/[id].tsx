@@ -29,7 +29,7 @@ import { ActivityKind, CreateActivityInput, NPK, Unit, formatQuantityWithUnit } 
 import { useActivityStore, usePlantActivities } from '@/stores/activity';
 import { usePrefsStore } from '@/stores/prefsStore';
 import { useTheme } from '@/contexts/ThemeContext';
-import { useI18n } from '@/contexts/I18nContext';
+import { useTranslation } from '@/contexts/I18nContext';
 import { getSpacing, radius } from '@/core/theme';
 import { typography } from '@/core/theme';
 import { Card } from '@/components/atoms/Card';
@@ -39,8 +39,8 @@ import { useHaptic } from '@/core/haptics';
 const EMPTY_NPK: NPK = { n: '', p: '', k: '' };
 
 export default function ActivityLogScreen() {
-  const theme = useTheme();
-  const { t } = useI18n();
+  const { theme } = useTheme();
+  const { t } = useTranslation();
   const router = useRouter();
   const haptic = useHaptic();
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -67,7 +67,7 @@ export default function ActivityLogScreen() {
     { kind: 'ใส่ปุ๋ย' as ActivityKind, icon: Sprout, color: theme.colors.success, label: 'ใส่ปุ๋ย' },
     { kind: 'พ่นยา' as ActivityKind, icon: Zap, color: theme.colors.warning, label: 'พ่นยา' },
     { kind: 'ย้ายกระถาง' as ActivityKind, icon: ArrowUpDown, color: theme.colors.primary, label: 'ย้ายกระถาง' },
-    { kind: 'ตรวจใบ' as ActivityKind, icon: Eye, color: theme.colors.secondary, label: 'ตรวจใบ' },
+    { kind: 'ตรวจใบ' as ActivityKind, icon: Eye, color: theme.colors.text.link, label: 'ตรวจใบ' },
   ], [theme.colors]);
 
   const units: Unit[] = ['ml', 'g', 'pcs', 'ล.'];
@@ -154,7 +154,7 @@ export default function ActivityLogScreen() {
       {/* Header */}
       <View style={styles.header}>
         <LinearGradient
-          colors={[theme.colors.primary, theme.colors.secondary]}
+          colors={[theme.colors.primary, theme.colors.primary]}
           style={styles.headerGradient}
         >
           <View style={styles.headerContent}>
@@ -230,7 +230,7 @@ export default function ActivityLogScreen() {
                   onChangeText={setQuantity}
                   placeholder="ระบุจำนวน"
                   keyboardType="numeric"
-                  placeholderTextColor={theme.colors.text.placeholder}
+                  placeholderTextColor={theme.colors.text.disabled}
                 />
               </View>
 
@@ -280,7 +280,7 @@ export default function ActivityLogScreen() {
                       }
                       keyboardType="numeric"
                       maxLength={3}
-                      placeholderTextColor={theme.colors.text.placeholder}
+                      placeholderTextColor={theme.colors.text.disabled}
                     />
                   </View>
 
@@ -295,7 +295,7 @@ export default function ActivityLogScreen() {
                       }
                       keyboardType="numeric"
                       maxLength={3}
-                      placeholderTextColor={theme.colors.text.placeholder}
+                      placeholderTextColor={theme.colors.text.disabled}
                     />
                   </View>
 
@@ -310,7 +310,7 @@ export default function ActivityLogScreen() {
                       }
                       keyboardType="numeric"
                       maxLength={3}
-                      placeholderTextColor={theme.colors.text.placeholder}
+                      placeholderTextColor={theme.colors.text.disabled}
                     />
                   </View>
                 </View>

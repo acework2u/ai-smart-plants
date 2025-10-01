@@ -7,6 +7,7 @@ module.exports = {
     './contexts/**/*.{js,jsx,ts,tsx}',
     './stores/**/*.{js,jsx,ts,tsx}',
   ],
+  presets: [require('nativewind/preset')],
   theme: {
     extend: {},
   },

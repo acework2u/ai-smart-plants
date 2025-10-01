@@ -378,8 +378,8 @@ export default function GardenScreen() {
         >
           <View style={styles.listCardRow}>
             <View style={[styles.listImageWrapper, { backgroundColor: theme.colors.gray100 }]}>
-              {plant.imageUri ? (
-                <Image source={{ uri: plant.imageUri }} style={styles.listImage} resizeMode="cover" />
+              {plant.imageUrl ? (
+                <Image source={{ uri: plant.imageUrl }} style={styles.listImage} resizeMode="cover" />
               ) : (
                 <View style={styles.listImagePlaceholder}>
                   <Leaf size={28} color={theme.colors.primary} />
@@ -428,8 +428,8 @@ export default function GardenScreen() {
         activeOpacity={0.85}
       >
         <View style={[styles.gridImageWrapper, { backgroundColor: theme.colors.gray100 }]}>
-          {plant.imageUri ? (
-            <Image source={{ uri: plant.imageUri }} style={styles.gridImage} resizeMode="cover" />
+          {plant.imageUrl ? (
+            <Image source={{ uri: plant.imageUrl }} style={styles.gridImage} resizeMode="cover" />
           ) : (
             <View style={styles.gridImagePlaceholder}>
               <Leaf size={24} color={theme.colors.primary} />
