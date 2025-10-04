@@ -16,6 +16,7 @@ export interface RegistrationData {
   lastName: string;
   acceptTerms: boolean;
   newsletter?: boolean;
+  role?: string;
 }
 
 export interface PasswordResetRequest {
@@ -55,7 +56,7 @@ export class EmailPasswordAuthProvider {
   private static instance: EmailPasswordAuthProvider;
 
   private readonly config: AuthConfig = {
-    apiBaseUrl: process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:3000/api',
+    apiBaseUrl: process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:4000',
     tokenStorageKey: '@smart_plant_auth_token',
     refreshTokenKey: '@smart_plant_refresh_token',
     rememberMeKey: '@smart_plant_remember_me',
@@ -85,7 +86,7 @@ export class EmailPasswordAuthProvider {
       this.validateCredentials(credentials);
 
       // Make authentication request
-      const response = await fetch(`${this.config.apiBaseUrl}/v1/auth/signin`, {
+      const response = await fetch(`${this.config.apiBaseUrl}/v1/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -94,31 +95,23 @@ export class EmailPasswordAuthProvider {
         body: JSON.stringify({
           email: credentials.email.toLowerCase().trim(),
           password: credentials.password,
-          remember_me: credentials.rememberMe || false,
         }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await this.safeReadError(response);
         throw this.createAuthError(
-          this.mapApiErrorCode(errorData.errors?.[0]?.code || response.status.toString()),
-          errorData.errors?.[0]?.message || 'Authentication failed',
+          this.mapApiErrorCode(errorData?.errors?.[0]?.code || response.status.toString()),
+          errorData?.errors?.[0]?.message || 'Authentication failed',
           errorData
         );
       }
 
       const data = await response.json();
+      const payload = data?.data ?? {};
 
-      // Create tokens object
-      const tokens: AuthTokens = {
-        accessToken: data.data.access_token,
-        refreshToken: data.data.refresh_token,
-        expiresAt: Date.now() + (data.data.expires_in * 1000),
-        idToken: data.data.id_token,
-      };
-
-      // Create user object
-      const user = this.createUserFromApiResponse(data.data.user, tokens);
+      const tokens: AuthTokens = this.createTokensFromPayload(payload);
+      const user = this.createUserFromApiResponse(payload.user, tokens, payload.profile);
 
       // Store credentials if remember me is enabled
       if (credentials.rememberMe) {
@@ -156,43 +149,35 @@ export class EmailPasswordAuthProvider {
       this.validateRegistrationData(registrationData);
 
       // Make registration request
+      const registerPayload = {
+        email: registrationData.email.toLowerCase().trim(),
+        password: registrationData.password,
+        role: registrationData.role ?? 'owner'
+      };
+
       const response = await fetch(`${this.config.apiBaseUrl}/v1/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-API-Version': 'v1',
         },
-        body: JSON.stringify({
-          email: registrationData.email.toLowerCase().trim(),
-          password: registrationData.password,
-          first_name: registrationData.firstName.trim(),
-          last_name: registrationData.lastName.trim(),
-          accept_terms: registrationData.acceptTerms,
-          newsletter: registrationData.newsletter || false,
-        }),
+        body: JSON.stringify(registerPayload),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await this.safeReadError(response);
         throw this.createAuthError(
-          this.mapApiErrorCode(errorData.errors?.[0]?.code || response.status.toString()),
-          errorData.errors?.[0]?.message || 'Registration failed',
+          this.mapApiErrorCode(errorData?.errors?.[0]?.code || response.status.toString()),
+          errorData?.errors?.[0]?.message || 'Registration failed',
           errorData
         );
       }
 
       const data = await response.json();
+      const payload = data?.data ?? {};
 
-      // Create tokens object
-      const tokens: AuthTokens = {
-        accessToken: data.data.access_token,
-        refreshToken: data.data.refresh_token,
-        expiresAt: Date.now() + (data.data.expires_in * 1000),
-        idToken: data.data.id_token,
-      };
-
-      // Create user object
-      const user = this.createUserFromApiResponse(data.data.user, tokens);
+      const tokens: AuthTokens = this.createTokensFromPayload(payload);
+      const user = this.createUserFromApiResponse(payload.user, tokens, payload.profile);
 
       // Create session
       const session: AppAuthSession = {
@@ -500,35 +485,43 @@ export class EmailPasswordAuthProvider {
     return emailRegex.test(email);
   }
 
-  private createUserFromApiResponse(userData: any, tokens: AuthTokens): any {
+  private createUserFromApiResponse(userData: any, tokens: AuthTokens, profileData?: any): any {
+    const firstName = userData?.first_name ?? userData?.firstName ?? userData?.given_name ?? '';
+    const lastName = userData?.last_name ?? userData?.lastName ?? userData?.family_name ?? '';
+    const composedName = [firstName, lastName].filter(Boolean).join(' ');
+    const fallbackName = userData?.name ?? userData?.email?.split('@')[0] ?? 'Smart Plant Member';
+
+    const profile = profileData ?? userData?.profile ?? {};
+    const preferences = userData?.preferences ?? {};
+
     return {
-      id: userData.id,
-      email: userData.email,
-      name: `${userData.first_name} ${userData.last_name}`.trim(),
-      avatar: userData.avatar_url,
-      joinDate: userData.created_at || new Date().toISOString(),
+      id: userData?.id ?? `temp-${tokens.accessToken.slice(0, 8)}`,
+      email: userData?.email ?? 'unknown@smartplant.app',
+      name: composedName || fallbackName,
+      avatar: userData?.avatar_url ?? userData?.avatar ?? null,
+      joinDate: userData?.createdAt ?? userData?.created_at ?? new Date().toISOString(),
       provider: 'email' as AuthProvider,
-      isEmailVerified: userData.email_verified || false,
-      isPhoneVerified: userData.phone_verified || false,
+      isEmailVerified: userData?.email_verified ?? userData?.isEmailVerified ?? false,
+      isPhoneVerified: userData?.phone_verified ?? userData?.isPhoneVerified ?? false,
       profile: {
-        displayName: `${userData.first_name} ${userData.last_name}`.trim(),
-        gardenCount: userData.profile?.garden_count || 0,
-        totalPlants: userData.profile?.total_plants || 0,
-        experienceLevel: userData.profile?.experience_level || 'beginner',
-        favoriteCategories: userData.profile?.favorite_categories || [],
+        displayName: profile.displayName ?? (composedName || fallbackName),
+        gardenCount: profile.gardenCount ?? profile.garden_count ?? 0,
+        totalPlants: profile.totalPlants ?? profile.total_plants ?? 0,
+        experienceLevel: profile.experienceLevel ?? profile.experience_level ?? 'beginner',
+        favoriteCategories: profile.favoriteCategories ?? profile.favorite_categories ?? [],
       },
       preferences: {
-        language: userData.preferences?.language || 'th',
-        theme: userData.preferences?.theme || 'system',
-        notifications: userData.preferences?.notifications !== false,
-        haptics: userData.preferences?.haptics !== false,
-        biometricAuth: userData.preferences?.biometric_auth || false,
-        units: userData.preferences?.units || {
+        language: preferences.language ?? 'th',
+        theme: preferences.theme ?? 'system',
+        notifications: preferences.notifications ?? true,
+        haptics: preferences.haptics ?? true,
+        biometricAuth: preferences.biometric_auth ?? preferences.biometricAuth ?? false,
+        units: preferences.units ?? {
           volume: 'ml',
           weight: 'g',
           temperature: 'celsius',
         },
-        privacy: userData.preferences?.privacy || {
+        privacy: preferences.privacy ?? {
           personalizedTips: true,
           analytics: true,
           crashReporting: true,
@@ -543,8 +536,10 @@ export class EmailPasswordAuthProvider {
       'auth/user-not-found': 'USER_NOT_FOUND',
       'auth/wrong-password': 'INVALID_CREDENTIALS',
       'auth/email-already-exists': 'EMAIL_ALREADY_EXISTS',
+      'auth/email-exists': 'EMAIL_ALREADY_EXISTS',
       'auth/weak-password': 'WEAK_PASSWORD',
       'auth/invalid-email': 'INVALID_EMAIL',
+      'auth/invalid-payload': 'INVALID_REQUEST',
       'auth/user-disabled': 'USER_DISABLED',
       'auth/too-many-requests': 'TOO_MANY_REQUESTS',
       'auth/network-error': 'NETWORK_ERROR',
@@ -557,6 +552,32 @@ export class EmailPasswordAuthProvider {
     };
 
     return errorCodeMap[apiCode] || 'UNKNOWN_ERROR';
+  }
+
+  private createTokensFromPayload(payload: any): AuthTokens {
+    const accessToken = payload?.accessToken ?? payload?.access_token;
+
+    if (!accessToken) {
+      throw this.createAuthError('TOKEN_MISSING', 'Access token not provided by API');
+    }
+
+    const fallbackExpires = 3600;
+    const expiresIn = payload?.expiresIn ?? payload?.expires_in ?? fallbackExpires;
+
+    return {
+      accessToken,
+      refreshToken: payload?.refreshToken ?? payload?.refresh_token ?? accessToken,
+      expiresAt: Date.now() + expiresIn * 1000,
+      idToken: payload?.idToken ?? payload?.id_token ?? undefined,
+    };
+  }
+
+  private async safeReadError(response: Response): Promise<any | null> {
+    try {
+      return await response.json();
+    } catch (error) {
+      return null;
+    }
   }
 
   private async storeRememberMeData(email: string): Promise<void> {

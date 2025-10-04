@@ -162,6 +162,13 @@ Smart Plant AI positions itself as an **AI-First Plant Care Platform with Commun
 **Assigned to:** Payment Agent Team
 **Codex Tasks:** Pricing models, Subscription tiers
 
+##### Growth BA Agent (Mobile Monetization)
+- Map guest → registered → paid journeys with Facebook/Google/OpenAI touchpoints
+- Design contextual paywalls (AI insights, insights tab, settings hub)
+- Define Monthly vs Annual offers, trials, referral incentives
+- Coordinate analytics requirements (conversion, churn, LTV dashboards)
+- Draft experiment backlog (pricing tests, onboarding prompts, upsell copy)
+
 #### Sprint 9: Advanced Features
 **Week 17-18 Goals:**
 - Cloud sync implementation

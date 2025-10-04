@@ -27,6 +27,8 @@ import { Card } from '../../components/atoms/Card';
 import { useTheme, type Theme } from '../../contexts/ThemeContext';
 import { radius, typography } from '../../core/theme';
 import { useHaptic } from '../../core/haptics';
+import { useAuthStore } from '../../stores/authStore';
+import type { AuthError } from '../../types/auth';
 
 interface RegisterForm {
   name: string;
@@ -66,6 +68,9 @@ const RegisterScreen: React.FC = () => {
   const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Partial<RegisterForm>>({});
+  const signUp = useAuthStore((state) => state.signUp);
+  const authIsLoading = useAuthStore((state) => state.isLoading);
+  const isProcessing = isLoading || authIsLoading;
 
   const validateForm = useCallback((): boolean => {
     const newErrors: Partial<RegisterForm> = {};
@@ -134,26 +139,36 @@ const RegisterScreen: React.FC = () => {
 
       setIsLoading(true);
 
-      // TODO: Implement actual registration logic
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate API call
+      await signUp({
+        provider: 'email',
+        email: form.email.trim(),
+        password: form.password,
+        name: form.name.trim(),
+        acceptTerms: form.acceptTerms && form.acceptPrivacy,
+        profile: {
+          displayName: form.name.trim(),
+          experienceLevel: form.experienceLevel,
+        },
+      });
 
       hapticController.success();
       Alert.alert(
         'สมัครสมาชิกสำเร็จ',
-        'กรุณาตรวจสอบอีเมลเพื่อยืนยันบัญชี',
+        'ยินดีต้อนรับสู่ Smart Plant AI',
         [
           {
-            text: 'ตกลง',
-            onPress: () => router.replace('/(auth)/login'),
+            text: 'เริ่มต้นใช้งาน',
+            onPress: () => router.replace('/(tabs)/garden'),
           },
         ]
       );
     } catch (error) {
       console.error('Registration error:', error);
       hapticController.error();
+      const authError = error as AuthError;
       Alert.alert(
         'สมัครสมาชิกไม่สำเร็จ',
-        'กรุณาตรวจสอบข้อมูลและลองใหม่อีกครั้ง',
+        authError?.message ?? 'กรุณาตรวจสอบข้อมูลและลองใหม่อีกครั้ง',
         [{ text: 'ตกลง', style: 'default' }]
       );
     } finally {
@@ -218,7 +233,7 @@ const RegisterScreen: React.FC = () => {
                     autoCapitalize="words"
                     autoCorrect={false}
                     autoComplete="name"
-                    editable={!isLoading}
+                    editable={!isProcessing}
                   />
                 </View>
                 {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
@@ -239,7 +254,7 @@ const RegisterScreen: React.FC = () => {
                     autoCapitalize="none"
                     autoCorrect={false}
                     autoComplete="email"
-                    editable={!isLoading}
+                    editable={!isProcessing}
                   />
                 </View>
                 {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
@@ -258,7 +273,7 @@ const RegisterScreen: React.FC = () => {
                     onChangeText={(text) => handleInputChange('phone', text)}
                     keyboardType="phone-pad"
                     autoComplete="tel"
-                    editable={!isLoading}
+                    editable={!isProcessing}
                   />
                 </View>
                 {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
@@ -276,7 +291,7 @@ const RegisterScreen: React.FC = () => {
                         form.experienceLevel === level.value && styles.experienceOptionActive,
                       ]}
                       onPress={() => handleExperienceLevelSelect(level.value)}
-                      disabled={isLoading}
+                      disabled={isProcessing}
                     >
                       <View style={styles.experienceContent}>
                         <Text style={[
@@ -310,7 +325,7 @@ const RegisterScreen: React.FC = () => {
                     autoCapitalize="none"
                     autoCorrect={false}
                     autoComplete="new-password"
-                    editable={!isLoading}
+                    editable={!isProcessing}
                   />
                   <Pressable
                     style={styles.eyeButton}
@@ -342,7 +357,7 @@ const RegisterScreen: React.FC = () => {
                     autoCapitalize="none"
                     autoCorrect={false}
                     autoComplete="new-password"
-                    editable={!isLoading}
+                    editable={!isProcessing}
                   />
                   <Pressable
                     style={styles.eyeButton}
@@ -364,7 +379,7 @@ const RegisterScreen: React.FC = () => {
                 <Pressable
                   style={styles.checkboxRow}
                   onPress={() => handleInputChange('acceptTerms', !form.acceptTerms)}
-                  disabled={isLoading}
+                  disabled={isProcessing}
                 >
                   <View style={[styles.checkbox, form.acceptTerms && styles.checkboxChecked]}>
                     {form.acceptTerms && <Check size={16} color={theme.colors.white} />}
@@ -377,7 +392,7 @@ const RegisterScreen: React.FC = () => {
                 <Pressable
                   style={styles.checkboxRow}
                   onPress={() => handleInputChange('acceptPrivacy', !form.acceptPrivacy)}
-                  disabled={isLoading}
+                  disabled={isProcessing}
                 >
                   <View style={[styles.checkbox, form.acceptPrivacy && styles.checkboxChecked]}>
                     {form.acceptPrivacy && <Check size={16} color={theme.colors.white} />}
@@ -392,15 +407,15 @@ const RegisterScreen: React.FC = () => {
               <Pressable
                 style={[
                   styles.registerButton,
-                  isLoading && styles.registerButtonLoading,
+                  isProcessing && styles.registerButtonLoading,
                 ]}
                 onPress={handleRegister}
-                disabled={isLoading}
+                disabled={isProcessing}
               >
                 <Text style={styles.registerButtonText}>
-                  {isLoading ? 'กำลังสมัครสมาชิก...' : 'สมัครสมาชิก'}
+                  {isProcessing ? 'กำลังสมัครสมาชิก...' : 'สมัครสมาชิก'}
                 </Text>
-                {!isLoading && (
+                {!isProcessing && (
                   <ArrowRight size={20} color={theme.colors.white} style={styles.registerButtonIcon} />
                 )}
               </Pressable>
@@ -419,7 +434,7 @@ const RegisterScreen: React.FC = () => {
               <Pressable
                 style={styles.socialButton}
                 onPress={() => handleSocialRegister('google')}
-                disabled={isLoading}
+                disabled={isProcessing}
               >
                 <Text style={styles.socialButtonText}>🔍 Google</Text>
               </Pressable>
@@ -427,7 +442,7 @@ const RegisterScreen: React.FC = () => {
               <Pressable
                 style={styles.socialButton}
                 onPress={() => handleSocialRegister('apple')}
-                disabled={isLoading}
+                disabled={isProcessing}
               >
                 <Text style={styles.socialButtonText}>🍎 Apple</Text>
               </Pressable>
@@ -435,7 +450,7 @@ const RegisterScreen: React.FC = () => {
               <Pressable
                 style={styles.socialButton}
                 onPress={() => handleSocialRegister('facebook')}
-                disabled={isLoading}
+                disabled={isProcessing}
               >
                 <Text style={styles.socialButtonText}>📘 Facebook</Text>
               </Pressable>

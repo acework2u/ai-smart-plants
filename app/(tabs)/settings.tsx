@@ -40,6 +40,7 @@ import { radius, typography } from '../../core/theme';
 import { useNotificationStore } from '../../stores/notificationStore';
 import { usePreferencesStore } from '../../stores/preferences';
 import { useUser } from '../../stores/userStore';
+import { useAuthStore } from '../../stores/authStore';
 
 type ThemeOption = 'light' | 'dark' | 'system';
 type LanguageOption = 'th' | 'en';
@@ -358,6 +359,7 @@ export default function SettingsScreen() {
   const [customTime, setCustomTime] = useState('08:00');
 
   const user = useUser();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   const themePreference = usePreferencesStore((state) => state.userPrefs.theme);
   const hapticsEnabled = usePreferencesStore((state) => state.userPrefs.haptics);
@@ -874,8 +876,8 @@ export default function SettingsScreen() {
     ? ['#14532d', '#0f172a']
     : ['#16a34a', '#0ea5e9'];
 
-  const heroActions = useMemo(
-    () => [
+  const heroActions = useMemo(() => {
+    const actions = [
       {
         key: 'preferences',
         icon: <Palette size={16} color="#ffffff" />,
@@ -893,9 +895,19 @@ export default function SettingsScreen() {
         label: t('settings.hero.actions.data'),
         onPress: () => router.push('/settings/data-backup'),
       },
-    ],
-    [router, t]
-  );
+    ];
+
+    if (!isAuthenticated) {
+      actions.unshift({
+        key: 'auth',
+        icon: <ShieldCheck size={16} color="#ffffff" />,
+        label: 'เข้าสู่ระบบ / สมัครสมาชิก',
+        onPress: () => router.push('/(auth)/login'),
+      });
+    }
+
+    return actions;
+  }, [router, t, isAuthenticated]);
 
   return (
     <SafeAreaView style={styles.safeArea}>

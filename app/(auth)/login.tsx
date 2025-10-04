@@ -28,6 +28,7 @@ import { GoogleOAuthProvider } from '../../services/auth/GoogleOAuthProvider';
 import { AppleOAuthProvider } from '../../services/auth/AppleOAuthProvider';
 import { FacebookOAuthProvider } from '../../services/auth/FacebookOAuthProvider';
 import { useAuthStore } from '../../stores/authStore';
+import type { AuthError } from '../../types/auth';
 
 interface LoginForm {
   email: string;
@@ -40,7 +41,8 @@ const LoginScreen: React.FC = () => {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const hapticController = useHaptic();
-  const { signIn, setSession } = useAuthStore();
+  const signInAction = useAuthStore((state) => state.signIn);
+  const authIsLoading = useAuthStore((state) => state.isLoading);
 
   const [form, setForm] = useState<LoginForm>({
     email: '',
@@ -52,6 +54,7 @@ const LoginScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isAppleAvailable, setIsAppleAvailable] = useState(false);
   const [errors, setErrors] = useState<Partial<LoginForm>>({});
+  const isProcessing = isLoading || authIsLoading;
 
   // Check Apple Sign In availability
   React.useEffect(() => {
@@ -97,17 +100,22 @@ const LoginScreen: React.FC = () => {
 
       setIsLoading(true);
 
-      // TODO: Implement actual login logic
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate API call
+      await signInAction({
+        provider: 'email',
+        email: form.email.trim(),
+        password: form.password,
+        rememberMe: form.rememberMe,
+      });
 
       hapticController.success();
       router.replace('/(tabs)/garden');
     } catch (error) {
       console.error('Login error:', error);
       hapticController.error();
+      const authError = error as AuthError;
       Alert.alert(
         'เข้าสู่ระบบไม่สำเร็จ',
-        'กรุณาตรวจสอบข้อมูลและลองใหม่อีกครั้ง',
+        authError?.message ?? 'กรุณาตรวจสอบข้อมูลและลองใหม่อีกครั้ง',
         [{ text: 'ตกลง', style: 'default' }]
       );
     } finally {
@@ -120,39 +128,22 @@ const LoginScreen: React.FC = () => {
       hapticController.selection();
       setIsLoading(true);
 
-      let session;
-
-      switch (provider) {
-        case 'google':
-          const googleProvider = GoogleOAuthProvider.getInstance();
-          if (!googleProvider.isEnabled) {
-            throw new Error('Google OAuth is not configured');
-          }
-          session = await googleProvider.signIn();
-          break;
-
-        case 'apple':
-          const appleProvider = AppleOAuthProvider.getInstance();
-          if (!appleProvider.isEnabled) {
-            throw new Error('Apple Sign In is not available on this device');
-          }
-          session = await appleProvider.signIn();
-          break;
-
-        case 'facebook':
-          const facebookProvider = FacebookOAuthProvider.getInstance();
-          if (!facebookProvider.isEnabled) {
-            throw new Error('Facebook OAuth is not configured');
-          }
-          session = await facebookProvider.signIn();
-          break;
-
-        default:
-          throw new Error('Unsupported login provider');
+      if (provider === 'google' && !GoogleOAuthProvider.getInstance().isEnabled) {
+        throw new Error('Google OAuth is not configured');
       }
 
-      // Store session in auth store
-      setSession(session);
+      if (provider === 'apple') {
+        const appleProviderInstance = AppleOAuthProvider.getInstance();
+        if (!appleProviderInstance.isEnabled) {
+          throw new Error('Apple Sign In is not available on this device');
+        }
+      }
+
+      if (provider === 'facebook' && !FacebookOAuthProvider.getInstance().isEnabled) {
+        throw new Error('Facebook OAuth is not configured');
+      }
+
+      await signInAction({ provider });
 
       hapticController.success();
       router.replace('/(tabs)/garden');
@@ -169,6 +160,8 @@ const LoginScreen: React.FC = () => {
         errorMessage = 'ฟีเจอร์นี้ไม่พร้อมใช้งานบนอุปกรณ์นี้';
       } else if (error.code === 'NETWORK_ERROR') {
         errorMessage = 'ไม่สามารถเชื่อมต่ออินเทอร์เน็ตได้';
+      } else if (error.code && error.message) {
+        errorMessage = error.message;
       } else if (error.message.includes('not configured')) {
         errorMessage = 'การตั้งค่าการเข้าสู่ระบบยังไม่สมบูรณ์';
       }
@@ -181,7 +174,7 @@ const LoginScreen: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [hapticController, router, setSession]);
+  }, [hapticController, router, signInAction]);
 
   const togglePasswordVisibility = useCallback(() => {
     hapticController.selection();
@@ -226,7 +219,7 @@ const LoginScreen: React.FC = () => {
                     autoCapitalize="none"
                     autoCorrect={false}
                     autoComplete="email"
-                    editable={!isLoading}
+                    editable={!isProcessing}
                   />
                 </View>
                 {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
@@ -247,7 +240,7 @@ const LoginScreen: React.FC = () => {
                     autoCapitalize="none"
                     autoCorrect={false}
                     autoComplete="password"
-                    editable={!isLoading}
+                    editable={!isProcessing}
                   />
                   <Pressable
                     style={styles.eyeButton}
@@ -277,15 +270,15 @@ const LoginScreen: React.FC = () => {
               <Pressable
                 style={[
                   styles.loginButton,
-                  isLoading && styles.loginButtonLoading,
+                  isProcessing && styles.loginButtonLoading,
                 ]}
                 onPress={handleLogin}
-                disabled={isLoading}
+                disabled={isProcessing}
               >
                 <Text style={styles.loginButtonText}>
-                  {isLoading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
+                  {isProcessing ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
                 </Text>
-                {!isLoading && (
+                {!isProcessing && (
                   <ArrowRight size={20} color={theme.colors.white} style={styles.loginButtonIcon} />
                 )}
               </Pressable>
@@ -302,34 +295,34 @@ const LoginScreen: React.FC = () => {
 
             <View style={styles.socialButtons}>
               <Pressable
-                style={[styles.socialButton, isLoading && styles.socialButtonDisabled]}
+                style={[styles.socialButton, isProcessing && styles.socialButtonDisabled]}
                 onPress={() => handleSocialLogin('google')}
-                disabled={isLoading}
+                disabled={isProcessing}
               >
-                <Text style={[styles.socialButtonText, isLoading && styles.socialButtonTextDisabled]}>
-                  {isLoading ? '⏳ กำลังเข้าสู่ระบบ...' : '🔍 Google'}
+                <Text style={[styles.socialButtonText, isProcessing && styles.socialButtonTextDisabled]}>
+                  {isProcessing ? '⏳ กำลังเข้าสู่ระบบ...' : '🔍 Google'}
                 </Text>
               </Pressable>
 
               {isAppleAvailable && (
                 <Pressable
-                  style={[styles.socialButton, isLoading && styles.socialButtonDisabled]}
+                  style={[styles.socialButton, isProcessing && styles.socialButtonDisabled]}
                   onPress={() => handleSocialLogin('apple')}
-                  disabled={isLoading}
+                  disabled={isProcessing}
                 >
-                  <Text style={[styles.socialButtonText, isLoading && styles.socialButtonTextDisabled]}>
-                    {isLoading ? '⏳ กำลังเข้าสู่ระบบ...' : '🍎 Apple'}
+                  <Text style={[styles.socialButtonText, isProcessing && styles.socialButtonTextDisabled]}>
+                    {isProcessing ? '⏳ กำลังเข้าสู่ระบบ...' : '🍎 Apple'}
                   </Text>
                 </Pressable>
               )}
 
               <Pressable
-                style={[styles.socialButton, isLoading && styles.socialButtonDisabled]}
+                style={[styles.socialButton, isProcessing && styles.socialButtonDisabled]}
                 onPress={() => handleSocialLogin('facebook')}
-                disabled={isLoading}
+                disabled={isProcessing}
               >
-                <Text style={[styles.socialButtonText, isLoading && styles.socialButtonTextDisabled]}>
-                  {isLoading ? '⏳ กำลังเข้าสู่ระบบ...' : '📘 Facebook'}
+                <Text style={[styles.socialButtonText, isProcessing && styles.socialButtonTextDisabled]}>
+                  {isProcessing ? '⏳ กำลังเข้าสู่ระบบ...' : '📘 Facebook'}
                 </Text>
               </Pressable>
             </View>

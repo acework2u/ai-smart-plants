@@ -15,6 +15,8 @@ import type {
 } from '../types/auth';
 import { TokenManager } from '../services/auth/TokenManager';
 import { GoogleOAuthProvider } from '../services/auth/GoogleOAuthProvider';
+import { EmailPasswordAuthProvider } from '../services/auth/EmailPasswordAuthProvider';
+import { SessionManager } from '../services/auth/SessionManager';
 
 interface AuthStore extends AuthState, AuthActions {
   // Additional state
@@ -32,6 +34,8 @@ interface AuthStore extends AuthState, AuthActions {
 
 const tokenManager = TokenManager.getInstance();
 const googleProvider = GoogleOAuthProvider.getInstance();
+const emailProvider = EmailPasswordAuthProvider.getInstance();
+const sessionManager = SessionManager.getInstance();
 
 export const useAuthStore = create<AuthStore>()(
   persist(
@@ -121,8 +125,8 @@ export const useAuthStore = create<AuthStore>()(
           return session;
         } catch (error) {
           console.error('Sign-in error:', error);
-          const authError = error instanceof Error && (error as any).code
-            ? error as AuthError
+          const authError = (error as AuthError)?.code
+            ? (error as AuthError)
             : createAuthError('SIGN_IN_FAILED', 'Failed to sign in');
 
           set({ error: authError, isLoading: false });
@@ -169,8 +173,8 @@ export const useAuthStore = create<AuthStore>()(
           return session;
         } catch (error) {
           console.error('Sign-up error:', error);
-          const authError = error instanceof Error && (error as any).code
-            ? error as AuthError
+          const authError = (error as AuthError)?.code
+            ? (error as AuthError)
             : createAuthError('SIGN_UP_FAILED', 'Failed to sign up');
 
           set({ error: authError, isLoading: false });
@@ -442,8 +446,27 @@ export const useAuthStore = create<AuthStore>()(
 
 // Helper functions
 async function handleEmailSignIn(request: SignInRequest): Promise<AuthSession> {
-  // TODO: Implement email sign-in
-  throw createAuthError('NOT_IMPLEMENTED', 'Email sign-in not yet implemented');
+  if (!request.email || !request.password) {
+    throw createAuthError('INVALID_CREDENTIALS', 'กรุณากรอกอีเมลและรหัสผ่าน');
+  }
+
+  try {
+    const session = await emailProvider.signIn({
+      email: request.email,
+      password: request.password,
+      rememberMe: request.rememberMe,
+    });
+
+    await sessionManager.createSession(session);
+
+    return session;
+  } catch (error: any) {
+    if (error?.code) {
+      throw error;
+    }
+
+    throw createAuthError('SIGN_IN_FAILED', 'เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+  }
 }
 
 async function handlePhoneSignIn(request: SignInRequest): Promise<AuthSession> {
@@ -452,8 +475,48 @@ async function handlePhoneSignIn(request: SignInRequest): Promise<AuthSession> {
 }
 
 async function handleEmailSignUp(request: SignUpRequest): Promise<AuthSession> {
-  // TODO: Implement email sign-up
-  throw createAuthError('NOT_IMPLEMENTED', 'Email sign-up not yet implemented');
+  if (!request.email || !request.password) {
+    throw createAuthError('INVALID_REQUEST', 'กรุณากรอกอีเมลและรหัสผ่าน');
+  }
+
+  if (!request.name?.trim()) {
+    throw createAuthError('INVALID_REQUEST', 'กรุณากรอกชื่อสำหรับโปรไฟล์ของคุณ');
+  }
+
+  if (!request.acceptTerms) {
+    throw createAuthError('TERMS_NOT_ACCEPTED', 'กรุณายอมรับข้อตกลงการใช้งาน');
+  }
+
+  const normalizedName = request.name.trim();
+  const [firstName, ...rest] = normalizedName.split(/\s+/);
+  const lastName = rest.join(' ') || firstName;
+  const experienceLevel = request.profile?.experienceLevel ?? 'beginner';
+
+  try {
+    const session = await emailProvider.register({
+      email: request.email,
+      password: request.password,
+      confirmPassword: request.password,
+      firstName,
+      lastName,
+      acceptTerms: request.acceptTerms,
+      newsletter: false,
+    });
+
+    session.user.name = normalizedName;
+    session.user.profile.displayName = normalizedName;
+    session.user.profile.experienceLevel = experienceLevel;
+
+    await sessionManager.createSession(session);
+
+    return session;
+  } catch (error: any) {
+    if (error?.code) {
+      throw error;
+    }
+
+    throw createAuthError('SIGN_UP_FAILED', 'สมัครสมาชิกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+  }
 }
 
 async function handlePhoneSignUp(request: SignUpRequest): Promise<AuthSession> {
@@ -472,4 +535,9 @@ export const initializeAuth = async () => {
   } catch (error) {
     console.error('Failed to initialize auth store:', error);
   }
+};
+
+export const __authTest = {
+  handleEmailSignIn,
+  handleEmailSignUp,
 };
